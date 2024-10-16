@@ -36,11 +36,11 @@ class AdaptiveTokenLoss(nn.Module):
         output_loss = (torch.abs(masks[:, -1].mean(-1) - alphas.squeeze()) - self.margin).relu()
 
         if self.inner_flops_type == 'l1':
-            inner_loss = masks[:, :-1].mean(-1).mean(1).mean()
+            inner_loss = masks[:, :-1].mean(-1).mean(1)
         else:
-            inner_loss = (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin).relu().mean(1).mean()
+            inner_loss = (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin).relu().mean(1)
 
         loss = (nn.functional.cross_entropy(x, y) + output_loss.mean() * self.output_flops_w +
-                inner_loss * self.inner_flops_w )
+                inner_loss.mean() * self.inner_flops_w )
 
         return loss

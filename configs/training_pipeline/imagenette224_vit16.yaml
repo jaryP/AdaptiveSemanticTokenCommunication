@@ -1,10 +1,10 @@
 defaults:
   - optimizer: sgd
   - augmentation: imagenette_224
-  - dataloader: bs_32
+  - dataloader: bs_128
   - model: deit_tiny_patch16_224
   - schema: default
   - evaluation: base
   - dataset: imagenette
 #  - early_stopping: base
-  - scheduler: cosine
+#  - scheduler: cosine

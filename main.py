@@ -255,6 +255,8 @@ def main(cfg: DictConfig):
                 log.info(f'Model loaded')
             else:
                 log.info(f'Training of the model')
+
+                loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
                 optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
                                                     params=model.parameters())
 
@@ -263,18 +265,18 @@ def main(cfg: DictConfig):
                     scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
                                                         optimizer=optimizer)
 
-                loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
-
                 bar = tqdm.tqdm(range(cfg.training_pipeline.schema.epochs),
                                 leave=False,
                                 desc='Pre training model')
 
                 for _ in bar:
+                    model.train()
                     for x, y in train_dataloader:
                         x, y = x.to(device), y.to(device)
 
                         pred = model(x)
                         loss = loss_f(pred, y)
+                        print(loss)
 
                         optimizer.zero_grad()
                         loss.backward()

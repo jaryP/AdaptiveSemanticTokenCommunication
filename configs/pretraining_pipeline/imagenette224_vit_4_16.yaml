@@ -1,0 +1,50 @@
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+  weight_decay: 0
+dataset:
+  train:
+    _target_: torchvision.datasets.Imagenette
+    split: train
+    size: '320px'
+    transform:
+      _target_: torchvision.transforms.Compose
+      _recursive_: true
+      transforms:
+        - _target_: torchvision.transforms.RandomCrop
+          size: 224
+        - _target_: torchvision.transforms.RandomHorizontalFlip
+        - _target_: torchvision.transforms.ToTensor
+    root: ${core.dataset_root}/imagenette
+    download: No
+  test:
+    _target_: torchvision.datasets.Imagenette
+    split: val
+    size: '320px'
+    transform:
+      _target_: torchvision.transforms.Compose
+      _recursive_: true
+      transforms:
+        - _target_: torchvision.transforms.ToTensor
+        - _target_: torchvision.transforms.Resize
+          size: [224, 224]
+    root: ${core.dataset_root}/imagenette
+    download: No
+dataloader:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 64
+  shuffle: true
+  sampler: null
+  num_workers: 0
+  collate_fn: null
+  pin_memory: null
+  drop_last: no
+schema:
+  epochs: 100
+early_stopping:
+  _target_: base.utils.EarlyStopper
+  patience: 10
+  min_delta: 0
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: ${pretraining_pipeline.schema.epochs}

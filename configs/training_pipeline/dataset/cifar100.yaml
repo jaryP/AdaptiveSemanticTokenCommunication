@@ -1,0 +1,24 @@
+train:
+  _target_: torchvision.datasets.CIFAR100
+  train: yes
+  transform:
+    _target_: torchvision.transforms.Compose
+    _recursive_: true
+    transforms:
+      - _target_: torchvision.transforms.RandomCrop
+        size: 32
+        padding: 4
+      - _target_: torchvision.transforms.RandomHorizontalFlip
+      - _target_: torchvision.transforms.ToTensor
+  root: ${core.dataset_root}/cifar100
+  download: Yes
+test:
+  _target_: torchvision.datasets.CIFAR100
+  train: False
+  transform:
+    _target_: torchvision.transforms.Compose
+    _recursive_: true
+    transforms:
+      - _target_: torchvision.transforms.ToTensor
+  root: ${core.dataset_root}/cifar100
+  download: No

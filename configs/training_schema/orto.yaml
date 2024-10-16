@@ -1,0 +1,10 @@
+_target_:  playground.training.AnnealingOrthoTraining
+eval_every: 1
+prior_loss: kl
+prior_loss_w: 0.5
+lambda_w: 0.1
+weights:
+  min: 0.1
+  max: 2
+  descendant: Yes
+  type: linear

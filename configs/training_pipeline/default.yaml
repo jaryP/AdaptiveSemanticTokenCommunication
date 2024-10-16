@@ -1,0 +1,8 @@
+#defaults:
+#  - optimizer:
+#  - augmentation:
+#  - dataloader:
+#  - model:
+#  - schema:
+#  - evaluation:
+#  - dataset:

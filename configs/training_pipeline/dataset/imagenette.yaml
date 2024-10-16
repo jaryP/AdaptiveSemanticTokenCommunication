@@ -1,0 +1,14 @@
+train:
+  _target_: torchvision.datasets.Imagenette
+  split: train
+  transform: ${training_pipeline.augmentation.train}
+  root: ${core.dataset_root}/imagenette
+  download: Yes
+  size: '320px'
+test:
+  _target_: torchvision.datasets.Imagenette
+  split: val
+  transform: ${training_pipeline.augmentation.test}
+  root: ${core.dataset_root}/imagenette
+  download: No
+  size: '320px'

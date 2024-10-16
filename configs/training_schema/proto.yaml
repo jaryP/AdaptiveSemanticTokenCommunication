@@ -1,0 +1,9 @@
+_target_:  proposal.training.CumulativeTraining
+eval_every: 1
+margin: 0.2
+ce_weight: 0.1
+loss_type: 2
+prior_topk: 4
+prior_loss_w: 1
+reduction: mean
+alpha: 0.5

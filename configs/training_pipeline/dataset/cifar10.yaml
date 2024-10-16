@@ -1,0 +1,13 @@
+train:
+  _target_: torchvision.datasets.CIFAR10
+  train: Yes
+#  transform: ${training_pipeline.augmentations.train}
+  transform: ${training_pipeline.augmentation.train}
+  root: ${core.dataset_root}/cifar10
+  download: Yes
+test:
+  _target_: torchvision.datasets.CIFAR10
+  train: No
+  transform: ${training_pipeline.augmentation.test}
+  root: ${core.dataset_root}/cifar10
+  download: Yes

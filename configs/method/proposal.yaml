@@ -1,0 +1,8 @@
+model:
+  _target_: methods.proposal.SemanticVit
+loss:
+  _target_: methods.proposal.AdaptiveTokenLoss
+  inner_flops_w: 1
+  output_flops_w: 1
+  inner_flops_type: margin
+  margin: 0.01

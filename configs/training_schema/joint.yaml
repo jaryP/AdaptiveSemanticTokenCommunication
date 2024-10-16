@@ -1,0 +1,7 @@
+_target_:  playground.training.JointTraining
+eval_every: 1
+weights:
+  min: 0.1
+  max: 2
+  descendant: Yes
+  type: linear

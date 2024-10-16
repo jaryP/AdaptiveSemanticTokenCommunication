@@ -1,0 +1,26 @@
+train:
+  _target_: torchvision.datasets.Flowers102
+  split: train
+  transform:
+    _target_: torchvision.transforms.Compose
+    _recursive_: true
+    transforms:
+      - _target_: torchvision.transforms.RandomCrop
+        size: 224
+        padding: 24
+      - _target_: torchvision.transforms.RandomHorizontalFlip
+      - _target_: torchvision.transforms.ToTensor
+  root: ${core.dataset_root}/flowers102
+  download: Yes
+test:
+  _target_: torchvision.datasets.Flowers102
+  split: val
+  transform:
+    _target_: torchvision.transforms.Compose
+    _recursive_: true
+    transforms:
+      - _target_: torchvision.transforms.ToTensor
+      - _target_: torchvision.transforms.Resize
+        size: [224, 224]
+  root: ${core.dataset_root}/flowers102
+  download: No

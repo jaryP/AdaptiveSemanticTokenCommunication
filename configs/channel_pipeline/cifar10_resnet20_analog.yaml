@@ -1,0 +1,10 @@
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+#  momentum: 0.9
+  weight_decay: 0
+channel:
+  _target_: channel.GaussianNoiseChannel
+  snr: [-10, 10]
+schema:
+  epochs: 50

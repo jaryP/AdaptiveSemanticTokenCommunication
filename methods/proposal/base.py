@@ -71,8 +71,10 @@ class SemanticVit(nn.Module):
 
         self.use_budget_emb = use_budget_emb
         if not use_budget_emb:
-            self.budget_token_lower = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
-            self.budget_token_upper = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
+            self.register_parameter('budget_token_lower', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
+            # self.budget_token_lower = nn.Parameter(torch.randn_like(self._model.cls_token) * 0.02)
+            # self.budget_token_upper = nn.Parameter(torch.randn_like(self._model.cls_token) * 0.02)
+            self.register_parameter('budget_token_upper', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
         else:
             self.budget_embs = nn.Embedding(100, len(self.cls_token.squeeze())).to(self.cls_token.device)
 
@@ -149,6 +151,9 @@ class SemanticVit(nn.Module):
         return x
 
     def forward(self, x, alpha=None):
+        if self.training and alpha is None:
+            alpha = (0 + 1e-3, 1 - 1e-3)
+
         if alpha is None and self.current_alpha is not None:
             alpha = self.current_alpha
 

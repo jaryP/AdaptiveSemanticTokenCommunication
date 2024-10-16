@@ -1,0 +1,58 @@
+core:
+  dataset_root: ./data
+  pretrained_root: ./pretrained_models
+  results_path: ./results
+
+hydra:
+  run:
+#    dir: results/${dataset_name}/${method_name}/${hydra.job.override_dirname}
+    dir: results/${dataset_name}/${method_name}/${process_saving_path:${hydra.job.override_dirname}}
+  #  sweep:
+#    dir: results/multirun/${scenario.scenario}/${method.save_name}
+#    subdir: ${hydra.job.override_dirname}
+  job:
+    chdir: No
+    config:
+      override_dirname:
+#        exclude_keys: ['device', 'method']
+        exclude_keys: ['device', 'enable_wandb', 'wandb_tags', 'plot']
+        kv_sep: '='
+        item_sep: '__'
+  job_logging:
+    version: 1
+    formatters:
+      simple:
+        format: '[%(filename)s][%(levelname)s] - %(message)s'
+      longer:
+        format: '[%(asctime)s][%(filename)s][%(levelname)s] - %(message)s'
+    handlers:
+      console:
+        class: logging.StreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+      file:
+        class: logging.FileHandler
+        formatter: longer
+        mode: w
+    root:
+      handlers: [console, file]
+
+    disable_existing_loggers: false
+
+defaults:
+  - training_pipeline: default
+  - pretraining_pipeline: null
+  - training_schema: null
+  - method: null
+  - evaluation: null
+  - final_evaluation: null
+  - _self_
+
+#method_name: ${method_path:${training_schema._target_}}
+#dataset_name: ${method_path:${training_pipeline.dataset.train._target_}}
+#channel_name: None
+
+device: null
+plot: No
+wandb_tags: null
+enable_wandb: Yes

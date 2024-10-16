@@ -1,0 +1,4 @@
+_target_: torch.optim.lr_scheduler.MultiStepLR
+milestones: [100, 150]
+gamma: 0.1
+#last_epoch: ${training_pipeline.schema.epochs}

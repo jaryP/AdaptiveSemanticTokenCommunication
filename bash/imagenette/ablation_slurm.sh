@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+METHOD=$1
+DEVICE=$2
+
+case $METHOD in
+adaptive)
+  python python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal device="$DEVICE"
+  python python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal device="$DEVICE"
+  ;;
+*)
+  echo -n "Unrecognized method"
+esac
+
+
+#!/bin/sh
+#SBATCH -A IscrC_BEVITIN
+#SBATCH -p boost_usr_prod
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:0
+#SBATCH --cpus-per-task=8
+#SBATCH --job-name=6g_adaptive
+#SBATCH --out=6g_adaptive_ablation.out
+
+echo "NODELIST="${SLURM_NODELIST}
+
+cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
+export WANDB_MODE=offline
+module load anaconda3
+module load cuda
+conda init
+#conda activate eep
+source activate eep
+
+### VIDEO-RET
+
+#retrieval-msrvtt
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=l1 inner_flops_w=0.1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=l1 inner_flops_w=0.5 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=l1 inner_flops_w=1 device=0
+
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=margin inner_flops_w=0.1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=margin inner_flops_w=0.5 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=imagenette224_vit16 method=proposal inner_flops_type=margin inner_flops_w=1 device=0

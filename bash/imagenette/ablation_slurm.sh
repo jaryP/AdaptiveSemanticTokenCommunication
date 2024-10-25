@@ -22,10 +22,10 @@ source activate eep
 ### VIDEO-RET
 
 #retrieval-msrvtt
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=l1 inner_flops_w=0.1 device=0
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=l1 inner_flops_w=0.5 device=0
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=l1 inner_flops_w=1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=l1 method.loss.inner_flops_w=0.1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=l1 method.loss.inner_flops_w=0.5 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=l1 method.loss.inner_flops_w=1 device=0
 
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=margin inner_flops_w=0.1 device=0
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=margin inner_flops_w=0.5 device=0
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 +model=deit_tiny_patch16_224 method=proposal inner_flops_type=margin inner_flops_w=1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=0.1 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=0.5 device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=1 device=0

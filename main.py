@@ -140,10 +140,13 @@ def main(cfg: DictConfig):
 
         if 'pretraining_pipeline' in cfg:
             pre_cfg = cfg.pretraining_pipeline
+            # pre_cfg = OmegaConf.merge(cfg.pretraining_pipeline, cfg.model)
+            OmegaConf.update(pre_cfg, 'model', cfg.model, force_add=True)
+            # pre_cfg = OmegaConf.to_container(pre_cfg, resolve=True)
 
-            pre_cfg.update({'model': cfg.training_pipeline.model})
+            pre_cfg['model'] = OmegaConf.to_container(cfg.model, resolve=True)
 
-            hash_path = process_saving_path(pre_cfg)
+            hash_path = get_hash(pre_cfg)
 
             pre_trained_path = os.path.join(cfg.core.pretrained_root, hash_path)
             os.makedirs(pre_trained_path, exist_ok=True)

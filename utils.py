@@ -85,12 +85,13 @@ def get_pretrained_model(cfg, model, device):
     else:
         test_dataloader = datalaoder_wrapper(dataset=test_dataset)
 
-    train_dataloader = datalaoder_wrapper(dataset=train_dataset, batch_size=cfg.schema.train_batch_size)
+    train_dataloader = datalaoder_wrapper(dataset=train_dataset)
 
     bar = tqdm.tqdm(range(cfg.schema.epochs),
                     leave=False,
                     desc='Pre training model')
 
+    model = model.to(device)
     for _ in bar:
         for x, y in train_dataloader:
             x, y = x.to(device), y.to(device)
@@ -121,68 +122,6 @@ def get_pretrained_model(cfg, model, device):
     print(c, t, c / t)
 
     return model
-
-    BATCH_SIZE = 128
-    EPOCHS = 50
-
-    # device = '0'
-    # if torch.cuda.is_available() and device != 'cpu':
-    #     device = 'cuda:{}'.format(device)
-    #     torch.cuda.set_device(device)
-    # else:
-    #     device = 'cpu'
-    #
-    # device = torch.device(device)
-
-    vit = timm.create_model(
-        'deit_tiny_patch16_224.fb_in1k',
-        pretrained=True,
-        num_classes=10).to(device)
-
-    opt = Adam(vit.parameters(), lr=1e-3)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=EPOCHS, eta_min=1e-6)
-
-    results_path = './results/'
-
-    model_path = os.path.join(results_path, f'pretrained_models/spawc.pt')
-
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-
-    if os.path.exists(model_path):
-        vit.load_state_dict(torch.load(model_path, map_location=device), strict=False)
-    else:
-        for _ in range(EPOCHS):
-            vit.train()
-
-            for x, y in DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True):
-                x, y = x.to(device), y.to(device)
-
-                pred = vit(x)
-                loss = nn.functional.cross_entropy(pred, y)
-
-                opt.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(vit.parameters(), 1)
-
-                opt.step()
-
-            scheduler.step()
-
-            vit.eval()
-            c, t = 0, 0
-            for x, y in DataLoader(testset, batch_size=BATCH_SIZE):
-                x, y = x.to(device), y.to(device)
-
-                pred = vit(x)
-
-                c += (pred.argmax(-1) == y).sum().item()
-                t += len(x)
-
-            print(c, t, c / t)
-
-        torch.save(vit.state_dict(), model_path)
-
-    return vit
 
 
 def get_encoder_decoder(input_size, compression, n_layers=2):

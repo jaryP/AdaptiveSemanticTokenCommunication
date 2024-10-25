@@ -34,7 +34,8 @@ def get_hash(dictionary=None, *, _root_=None):
                       for k, v in dictionary.items()
                       if k not in ['hydra', 'device', 'core']}
 
-    del dictionary['training_pipeline']['schema']['experiments']
+    if 'training_pipeline' in dictionary:
+        del dictionary['training_pipeline']['schema']['experiments']
 
     # https://death.andgravity.com/stable-hashing
     return str(hashlib.md5(json.dumps(dictionary,

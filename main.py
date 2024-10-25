@@ -1,15 +1,8 @@
-import math
-
-import importlib.util
 import json
 import logging
 import os
-import pickle
 import random
 import warnings
-from collections import defaultdict
-from copy import deepcopy
-from typing import Sequence
 
 import hydra
 
@@ -17,76 +10,11 @@ import numpy as np
 import tqdm.auto as tqdm
 from omegaconf import DictConfig, OmegaConf
 import torch
-from sklearn.model_selection import ParameterGrid
-from torch import nn
 
 from torch.utils.data import DataLoader
 
-from methods.proposal import SemanticVit
-
-has_wandb = importlib.util.find_spec("wandb") is not None
-
-
-def pretrain_model(cfg, model, device='cpu'):
-    model = model.to(device)
-    train_dataset = hydra.utils.instantiate(cfg.dataset.train)
-    test_dataset = hydra.utils.instantiate(cfg.dataset.test)
-
-    optimizer = hydra.utils.instantiate(cfg.optimizer,
-                                        params=model.parameters())
-
-    scheduler = None
-    if 'scheduler' in cfg:
-        scheduler = hydra.utils.instantiate(cfg.scheduler,
-                                            optimizer=optimizer)
-
-    datalaoder_wrapper = hydra.utils.instantiate(
-        cfg.dataloader, _partial_=True)
-
-    if 'dev_dataloader' in cfg.dataloader:
-        test_dataloader = hydra.utils.instantiate(
-            cfg.dataloader, dataset=test_dataset)
-    else:
-        test_dataloader = datalaoder_wrapper(dataset=test_dataset)
-
-    train_dataloader = datalaoder_wrapper(dataset=train_dataset, batch_size=cfg.schema.train_batch_size)
-
-    bar = tqdm.tqdm(range(cfg.schema.epochs),
-                    leave=False,
-                    desc='Pre training model')
-
-    for _ in bar:
-        model.train()
-
-        for x, y in train_dataloader:
-            x, y = x.to(device), y.to(device)
-
-            pred = model(x)
-            loss = nn.functional.cross_entropy(pred, y)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        if scheduler is not None:
-            scheduler.step()
-
-        model.eval()
-        with torch.no_grad():
-            t, c = 0, 0
-
-            for x, y in test_dataloader:
-                x, y = x.to(device), y.to(device)
-
-                pred = model(x)
-                c += (pred.argmax(-1) == y).sum().item()
-                t += len(x)
-
-        bar.set_postfix({'Test acc': c / t})
-
-    print(c, t, c / t)
-
-    return model
+from serialization import process_saving_path, get_hash
+from utils import get_pretrained_model
 
 
 class NpEncoder(json.JSONEncoder):
@@ -100,13 +28,16 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 
-def process_saving_path(sstring: str) -> str:
-    ll = sorted([s.split('=') for s in sstring.split('__')], key=lambda a: a[0])
+# def process_saving_path(sstring: str) -> str:
+#     ll = sorted([s.split('=') for s in sstring.split('__')], key=lambda a: a[0])
+#
+#     return '__'.join(s[1] for s in ll)
 
-    return '__'.join(s[1] for s in ll)
+def prova(prova, *, _root_):
+    return None
 
-
-OmegaConf.register_new_resolver("method_path", lambda x: x.split('.')[-1] if x is not None else None)
+OmegaConf.register_new_resolver("to_hash", get_hash)
+OmegaConf.register_new_resolver("method_path", lambda x: x.split('.')[-1] if x is not None else 'null')
 OmegaConf.register_new_resolver("process_saving_path", process_saving_path)
 
 
@@ -141,21 +72,15 @@ def main(cfg: DictConfig):
     dev_split = training_schema.get('dev_split', 0.1)
 
     # TODO: IMPLEMENTARE CONTROLLO SUL FILE DI CONFIG
-
+    #
+    # d = OmegaConf.to_container(cfg)
+    # del d['device']
+    # del d['core']
+    # del d['training_pipeline']['schema']['experiments']
+    #
+    # path_hash = get_hash(d)
     outer_experiment_path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
-
-    use_wandb = cfg.get('enable_wandb', False)
-    use_wandb = False
-    wandb_tags = []
-
-    if use_wandb:
-        if not has_wandb:
-            raise ImportError(
-                'You wanted to used WaNdb but it is not installed.')
-        else:
-            import wandb
-
-            wandb_tags = cfg.get('wadnb_tags', None)
+    # outer_experiment_path = os.path.join(outer_experiment_path, path_hash)
 
     for seed in range(training_schema.experiments):
 
@@ -211,14 +136,16 @@ def main(cfg: DictConfig):
         train_dataloader = datalaoder_wrapper(dataset=train_dataset, shuffle=True,
                                               batch_size=cfg.training_pipeline.schema.train_batch_size)
 
-        model = hydra.utils.instantiate(cfg.training_pipeline.model,
-                                        num_classes=classes)
+        model = hydra.utils.instantiate(cfg.model, num_classes=classes)
 
         if 'pretraining_pipeline' in cfg:
             pre_cfg = cfg.pretraining_pipeline
-            pre_trained_path = os.path.join(cfg.core.pretrained_root,
-                                            pre_cfg.dataset.train._target_.split('.')[-1],
-                                            cfg.training_pipeline.model._target_.split('.')[-1])
+
+            pre_cfg.update({'model': cfg.training_pipeline.model})
+
+            hash_path = process_saving_path(pre_cfg)
+
+            pre_trained_path = os.path.join(cfg.core.pretrained_root, hash_path)
             os.makedirs(pre_trained_path, exist_ok=True)
 
             premodel_path = os.path.join(pre_trained_path, f'model_{seed}.pt')
@@ -227,7 +154,7 @@ def main(cfg: DictConfig):
                 model.load_state_dict(torch.load(premodel_path))
                 model = model.to(device)
             else:
-                model = pretrain_model(pre_cfg, model, device)
+                model = get_pretrained_model(pre_cfg, model, device)
                 torch.save(model.state_dict(), premodel_path)
 
             model.eval()
@@ -240,7 +167,7 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
-            print(c, t, c / t)
+            log.info('Pre trained model score', c, t, c / t)
             model = model.cpu()
 
         model = model.to(device)
@@ -267,7 +194,8 @@ def main(cfg: DictConfig):
 
                 bar = tqdm.tqdm(range(cfg.training_pipeline.schema.epochs),
                                 leave=False,
-                                desc='Pre training model')
+                                desc='Model training')
+                epoch_losses = []
 
                 for _ in bar:
                     model.train()
@@ -276,7 +204,8 @@ def main(cfg: DictConfig):
 
                         pred = model(x)
                         loss = loss_f(pred, y)
-                        print(loss)
+
+                        epoch_losses.append(loss.item())
 
                         optimizer.zero_grad()
                         loss.backward()
@@ -296,7 +225,7 @@ def main(cfg: DictConfig):
                             c += (pred.argmax(-1) == y).sum().item()
                             t += len(x)
 
-                    bar.set_postfix({'Test acc': c / t})
+                    bar.set_postfix({'Test acc': c / t, 'Epoch loss': np.mean(epoch_losses)})
 
                 print(c, t, c / t)
 

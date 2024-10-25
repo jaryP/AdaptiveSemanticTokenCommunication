@@ -5,8 +5,8 @@ core:
 
 hydra:
   run:
-#    dir: results/${dataset_name}/${method_name}/${hydra.job.override_dirname}
-    dir: results/${dataset_name}/${method_name}/${process_saving_path:${hydra.job.override_dirname}}
+    dir: ${core.results_path}/${dataset_name}/${method_name}/${to_hash:}
+#    dir: ${core.results_path}
   #  sweep:
 #    dir: results/multirun/${scenario.scenario}/${method.save_name}
 #    subdir: ${hydra.job.override_dirname}
@@ -40,7 +40,8 @@ hydra:
     disable_existing_loggers: false
 
 defaults:
-  - training_pipeline: default
+  - model: null
+  - training_pipeline: null
   - pretraining_pipeline: null
   - training_schema: null
   - method: null
@@ -48,11 +49,10 @@ defaults:
   - final_evaluation: null
   - _self_
 
-#method_name: ${method_path:${training_schema._target_}}
-#dataset_name: ${method_path:${training_pipeline.dataset.train._target_}}
+method_name: ${method_path:${method.model._target_}}
+## loss_name: ${method_path:${training_schema._target_}}
+dataset_name: ${method_path:${training_pipeline.dataset.train._target_}}
 #channel_name: None
 
 device: null
-plot: No
-wandb_tags: null
-enable_wandb: Yes
+

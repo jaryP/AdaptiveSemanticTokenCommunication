@@ -11,3 +11,4 @@ adaptive)
 *)
   echo -n "Unrecognized method"
 esac
+

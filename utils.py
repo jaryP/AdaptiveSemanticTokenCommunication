@@ -64,8 +64,9 @@ def get_merging_percentage_torch(n, target_p, inverse=False):
 
 def get_pretrained_model(cfg, model, device):
 
+    to_download = not os.path.exists(cfg.dataset.train.root)
 
-    train_dataset = hydra.utils.instantiate(cfg.dataset.train)
+    train_dataset = hydra.utils.instantiate(cfg.dataset.train, download=to_download)
     test_dataset = hydra.utils.instantiate(cfg.dataset.test)
 
     optimizer = hydra.utils.instantiate(cfg.optimizer,

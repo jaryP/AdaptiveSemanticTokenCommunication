@@ -63,23 +63,6 @@ def main(cfg: DictConfig):
 
     print(OmegaConf.to_yaml(cfg.training_pipeline.dataset.train, resolve=True))
 
-    if 'pretraining_pipeline' in cfg:
-        pre_cfg = cfg.pretraining_pipeline
-        # pre_cfg = OmegaConf.merge(cfg.pretraining_pipeline, cfg.model)
-        OmegaConf.update(pre_cfg, 'model', cfg.model, force_add=True)
-        # pre_cfg = OmegaConf.to_container(pre_cfg, resolve=True)
-
-        pre_cfg['model'] = OmegaConf.to_container(cfg.model, resolve=True)
-
-        hash_path = get_hash(pre_cfg)
-
-        pre_trained_path = os.path.join(cfg.core.pretrained_root, hash_path)
-        os.makedirs(pre_trained_path, exist_ok=True)
-
-        premodel_path = os.path.join(pre_trained_path, f'model_{0}.pt')
-
-        model = get_pretrained_model(pre_cfg, None, device)
-
     to_download = not os.path.exists(cfg.training_pipeline.dataset.train.root)
 
     train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download)

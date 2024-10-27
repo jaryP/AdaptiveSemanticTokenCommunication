@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import warnings
+from collections import defaultdict
 
 import hydra
 
@@ -13,6 +14,7 @@ import torch
 
 from torch.utils.data import DataLoader
 
+from proposal import CustomBlock
 from serialization import process_saving_path, get_hash
 from utils import get_pretrained_model
 
@@ -230,14 +232,48 @@ def main(cfg: DictConfig):
 
                     bar.set_postfix({'Test acc': c / t, 'Epoch loss': np.mean(epoch_losses)})
 
-                print(c, t, c / t)
-
                 torch.save(model.state_dict(), model_path)
 
                 # with open(os.path.join(experiment_path, 'training_results.json'),
                 #           'w') as f:
                 #     json.dump(all_results, f, ensure_ascii=False, indent=4,
                 #               cls=NpEncoder)
+
+        model.eval()
+        with torch.no_grad():
+            t, c = 0, 0
+
+            for x, y in test_dataloader:
+                x, y = x.to(device), y.to(device)
+
+                pred = model(x)
+                c += (pred.argmax(-1) == y).sum().item()
+                t += len(x)
+
+
+            log.info(f'Model score: {c}, {t}, ({c / t})')
+
+            for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+
+                c, t = 0, 0
+                average_dropping = defaultdict(float)
+
+                for x, y in DataLoader(test_dataset, batch_size=1):
+                    x, y = x.to(device), y.to(device)
+
+                    pred = model(x, alpha=a)
+
+                    c += (pred.argmax(-1) == y).sum().item()
+                    t += len(x)
+
+                    for i, b in enumerate([b for b in model.blocks if isinstance(b, CustomBlock)]):
+                        average_dropping[i] += b.last_mask.shape[1]
+
+                        print({k: v / t for k, v in average_dropping.items()})
+
+                log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                v = {k: v / t for k, v in average_dropping.items()}
+                log.info(f'Model budget {a} has average scoring: {v}')
 
         #     # if isinstance(model, HaltingAlgorithm):
         #     # with eval_mode(model), torch.no_grad():

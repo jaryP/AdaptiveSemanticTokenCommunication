@@ -170,7 +170,7 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
-            log.info('Pre trained model score', c, t, c / t)
+            log.info(f'Pre trained model score: {c}, {t}, ({c / t})')
             model = model.cpu()
 
         model = model.to(device)

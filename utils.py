@@ -120,8 +120,6 @@ def get_pretrained_model(cfg, model, device):
 
         bar.set_postfix({'Test acc': c / t})
 
-    print(c, t, c / t)
-
     return model
 
 

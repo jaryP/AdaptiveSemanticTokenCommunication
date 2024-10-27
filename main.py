@@ -14,7 +14,7 @@ import torch
 
 from torch.utils.data import DataLoader
 
-from proposal import CustomBlock
+from methods.proposal import AdaptiveBlock
 from serialization import process_saving_path, get_hash
 from utils import get_pretrained_model
 
@@ -266,7 +266,7 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
-                    for i, b in enumerate([b for b in model.blocks if isinstance(b, CustomBlock)]):
+                    for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock)]):
                         average_dropping[i] += b.last_mask.shape[1]
 
                         print({k: v / t for k, v in average_dropping.items()})

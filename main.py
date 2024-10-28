@@ -71,7 +71,7 @@ def main(cfg: DictConfig):
     test_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.test, _convert_="partial")
 
     training_schema = cfg.training_pipeline.schema
-    dev_split = training_schema.get('dev_split', 0.1)
+    dev_split = training_schema.get('dev_split', None)
 
     # TODO: IMPLEMENTARE CONTROLLO SUL FILE DI CONFIG
     #
@@ -117,9 +117,9 @@ def main(cfg: DictConfig):
         dev_dataloader = None
         dev_dataset = None
 
-        if dev_split is not None:
+        if dev_split is not None and dev_split > 0:
             idx = np.arange(len(train_dataset))
-            np.random.RandomState(0).shuffle(idx)
+            np.random.shuffle(idx)
 
             if isinstance(dev_split, int):
                 dev_i = dev_split
@@ -154,7 +154,7 @@ def main(cfg: DictConfig):
             os.makedirs(pre_trained_path, exist_ok=True)
 
             premodel_path = os.path.join(pre_trained_path, f'model_{seed}.pt')
-
+            
             if os.path.exists(premodel_path):
                 model.load_state_dict(torch.load(premodel_path))
                 model = model.to(device)

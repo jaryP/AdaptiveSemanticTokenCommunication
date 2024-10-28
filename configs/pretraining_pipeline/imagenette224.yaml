@@ -37,7 +37,7 @@ dataset:
       _recursive_: true
       transforms:
         - _target_: torchvision.transforms.Resize
-          size: (224, 224)
+          size: [224, 224]
 #          interpolation: torchvision.transforms.InterpolationMode.BICUBIC
         - _target_: torchvision.transforms.ToTensor
         - _target_: torchvision.transforms.Normalize

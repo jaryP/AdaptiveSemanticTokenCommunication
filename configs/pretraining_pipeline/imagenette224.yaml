@@ -14,15 +14,9 @@ dataset:
           num_ops: 2
           magnitude: 9
         - _target_: torchvision.transforms.ColorJitter
-          brightness:
-            - 0.6
-            - 1.4
-          contrast:
-            - 0.6
-            - 1.4
-          saturation:
-            - 0.6
-            - 1.4
+          brightness: [0.6, 1.4]
+          contrast: [0.6, 1.4]
+          saturation: [0.6, 1.4]
           hue: 0
         - _target_: torchvision.transforms.Resize
           size: [224, 224]

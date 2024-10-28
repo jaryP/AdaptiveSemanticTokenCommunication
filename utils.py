@@ -66,11 +66,10 @@ def get_pretrained_model(cfg, model, device):
 
     to_download = not os.path.exists(cfg.dataset.train.root)
 
-    train_dataset = hydra.utils.instantiate(cfg.dataset.train, download=to_download)
-    test_dataset = hydra.utils.instantiate(cfg.dataset.test)
+    train_dataset = hydra.utils.instantiate(cfg.dataset.train, download=to_download, _convert_="partial")
+    test_dataset = hydra.utils.instantiate(cfg.dataset.test, _convert_="partial")
 
-    optimizer = hydra.utils.instantiate(cfg.optimizer,
-                                        params=model.parameters())
+    optimizer = hydra.utils.instantiate(cfg.optimizer, params=model.parameters())
 
     scheduler = None
     if 'scheduler' in cfg:

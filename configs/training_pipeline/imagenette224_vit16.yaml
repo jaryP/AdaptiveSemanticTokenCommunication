@@ -7,4 +7,4 @@ defaults:
   - evaluation: base
   - dataset: imagenette
 #  - early_stopping: base
-#  - scheduler: cosine
+  - scheduler: cosine

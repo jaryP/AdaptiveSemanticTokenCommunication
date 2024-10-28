@@ -2,5 +2,5 @@ epochs: 150
 experiments: 1
 #dev_split: 0.1
 #finetuning_subset: 0.1
-train_batch_size: 32
+train_batch_size: 128
 eval_batch_size: 128

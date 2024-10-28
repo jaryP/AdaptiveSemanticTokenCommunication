@@ -19,11 +19,11 @@ class AdaptiveTokenLoss(nn.Module):
         self.output_flops_w = output_flops_w
         self.inner_flops_type = inner_flops_type
         self._model = model
-        self.margin = margin
+        self.margin = 0
 
         assert inner_flops_type in ['margin', 'l1']
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) :
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
         alphas = self._model.last_alpha.squeeze()
         masks = []
 
@@ -41,6 +41,6 @@ class AdaptiveTokenLoss(nn.Module):
             inner_loss = (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin).relu().mean(1)
 
         loss = (nn.functional.cross_entropy(x, y) + output_loss.mean() * self.output_flops_w +
-                inner_loss.mean() * self.inner_flops_w )
+                inner_loss.mean() * self.inner_flops_w)
 
         return loss

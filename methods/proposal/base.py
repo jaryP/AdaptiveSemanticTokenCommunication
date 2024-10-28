@@ -15,7 +15,7 @@ class AdaptiveBlock(nn.Module):
         self.fl = nn.Sequential(nn.Linear(dim, 1, bias=True)).to(next(self.parameters()).device)
         self.fh = nn.Sequential(nn.Linear(dim, 1, bias=True)).to(next(self.parameters()).device)
 
-        self.fl[-1].bias.data.normal_(10, 1)
+        self.fl[-1].bias.data.normal_(10, 0.1)
         self.fh[-1].bias.data.normal_(-10, 0.1)
 
         self.last_mask = None
@@ -42,8 +42,8 @@ class AdaptiveBlock(nn.Module):
         # mask = torch.relu(mask - alpha) / (1 - alpha)
         mask = torch.relu(mask - th)
 
-        zeros = torch.ones_like(mask[:, :1])
-        mask = torch.cat((zeros, mask, zeros), 1)
+        ones = torch.ones_like(mask[:, :1])
+        mask = torch.cat((ones, mask, ones), 1)
 
         if not self.training and len(x) == 1:
             bmask = mask > 0
@@ -61,7 +61,7 @@ class AdaptiveBlock(nn.Module):
 
             self.last_mask = mask
 
-            x = self._block(x * mask) * mask
+            x = self._block(x * mask)
 
         return x, mask
 
@@ -74,10 +74,10 @@ class SemanticVit(nn.Module):
 
         self.use_budget_emb = use_budget_emb
         if not use_budget_emb:
-            self.register_parameter('budget_token_lower', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
-            # self.budget_token_lower = nn.Parameter(torch.randn_like(self._model.cls_token) * 0.02)
-            # self.budget_token_upper = nn.Parameter(torch.randn_like(self._model.cls_token) * 0.02)
-            self.register_parameter('budget_token_upper', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
+            # self.register_parameter('budget_token_lower', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
+            self.budget_token_lower = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
+            self.budget_token_upper = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
+            # self.register_parameter('budget_token_upper', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
         else:
             self.budget_embs = nn.Embedding(100, len(self.cls_token.squeeze())).to(self.cls_token.device)
 
@@ -141,11 +141,13 @@ class SemanticVit(nn.Module):
         x = self.norm_pre(x)
         if self.grad_checkpointing and not torch.jit.is_scripting():
             x = checkpoint_seq(self.blocks, x)
+            print('scemo')
         else:
             prev_mask = None
             for b in self.blocks:
                 if isinstance(b, AdaptiveBlock):
                     x, prev_mask = b(x, prev_mask=prev_mask, alpha=alpha)
+                    # prev_mask = None
                 else:
                     prev_mask = None
                     x = b(x)

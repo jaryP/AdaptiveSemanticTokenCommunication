@@ -6,30 +6,52 @@ dataset:
   train:
     _target_: torchvision.datasets.Imagenette
     split: train
-    size: '320px'
     transform:
       _target_: torchvision.transforms.Compose
       _recursive_: true
       transforms:
-        - _target_: torchvision.transforms.RandomCrop
-          size: 224
+        - _target_: torchvision.transforms.RandAugment
+          num_ops: 2
+          magnitude: 9
+        - _target_: torchvision.transforms.ColorJitter
+          brightness:
+            - 0.6
+            - 1.4
+          contrast:
+            - 0.6
+            - 1.4
+          saturation:
+            - 0.6
+            - 1.4
+          hue: 0
+        - _target_: torchvision.transforms.Resize
+          size: [224, 224]
+#          interpolation: torchvision.transforms.InterpolationMode.BICUBIC
         - _target_: torchvision.transforms.RandomHorizontalFlip
         - _target_: torchvision.transforms.ToTensor
+        - _target_: torchvision.transforms.Normalize
+          mean: [ 0.485, 0.456, 0.406 ]
+          std: [ 0.229, 0.224, 0.225 ]
     root: ${core.dataset_root}/imagenette
-    download: No
+    download: Yes
+    size: 'full'
   test:
     _target_: torchvision.datasets.Imagenette
     split: val
-    size: '320px'
     transform:
       _target_: torchvision.transforms.Compose
       _recursive_: true
       transforms:
-        - _target_: torchvision.transforms.ToTensor
         - _target_: torchvision.transforms.Resize
-          size: [224, 224]
+          size: (224, 224)
+#          interpolation: torchvision.transforms.InterpolationMode.BICUBIC
+        - _target_: torchvision.transforms.ToTensor
+        - _target_: torchvision.transforms.Normalize
+          mean: [ 0.485, 0.456, 0.406 ]
+          std: [ 0.229, 0.224, 0.225 ]
     root: ${core.dataset_root}/imagenette
     download: No
+    size: 'full'
 dataloader:
   _target_: torch.utils.data.DataLoader
   batch_size: 64

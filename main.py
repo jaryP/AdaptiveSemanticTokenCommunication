@@ -67,8 +67,8 @@ def main(cfg: DictConfig):
 
     to_download = not os.path.exists(cfg.training_pipeline.dataset.train.root)
 
-    train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download)
-    test_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.test)
+    train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download, _convert_="partial")
+    test_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.test, _convert_="partial")
 
     training_schema = cfg.training_pipeline.schema
     dev_split = training_schema.get('dev_split', 0.1)
@@ -188,6 +188,8 @@ def main(cfg: DictConfig):
             else:
                 log.info(f'Training of the model')
 
+                gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
+
                 loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
                 optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
                                                     params=model.parameters())
@@ -214,6 +216,9 @@ def main(cfg: DictConfig):
 
                         optimizer.zero_grad()
                         loss.backward()
+                        if gradient_clipping_value is not None:
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
+
                         optimizer.step()
 
                     if scheduler is not None:
@@ -249,7 +254,6 @@ def main(cfg: DictConfig):
                 pred = model(x)
                 c += (pred.argmax(-1) == y).sum().item()
                 t += len(x)
-
 
             log.info(f'Model score: {c}, {t}, ({c / t})')
 

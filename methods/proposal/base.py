@@ -18,6 +18,8 @@ class AdaptiveBlock(nn.Module):
         self.fl[-1].bias.data.normal_(10, 1)
         self.fh[-1].bias.data.normal_(-10, 0.1)
 
+        self.last_mask = None
+
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)
@@ -44,12 +46,13 @@ class AdaptiveBlock(nn.Module):
         mask = torch.cat((zeros, mask, zeros), 1)
 
         if not self.training and len(x) == 1:
+            bmask = mask > 0
+            self.last_mask = bmask.float()
+
             if mask.sum(1) == 2:
                 return x, None
 
-            bmask = mask > 0
             x = x[bmask.expand_as(x)].view(1, -1, x.shape[-1])
-            self.last_mask = bmask.float()
             x = self._block(x)
             return x, mask
         else:

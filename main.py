@@ -266,10 +266,8 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
-                    for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock)]):
+                    for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
                         average_dropping[i] += b.last_mask.shape[1]
-
-                        print({k: v / t for k, v in average_dropping.items()})
 
                 log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
                 v = {k: v / t for k, v in average_dropping.items()}

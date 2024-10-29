@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=6g_adaptive
-#SBATCH --out=./sout/adaptive_ablation_margin.out
+#SBATCH --out=./sout/adaptive_ablation_bml1.out
 
 echo "NODELIST="${SLURM_NODELIST}
 

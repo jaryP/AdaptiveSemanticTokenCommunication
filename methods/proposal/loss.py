@@ -21,7 +21,7 @@ class AdaptiveTokenLoss(nn.Module):
         self._model = model
         self.margin = margin
 
-        assert inner_flops_type in ['margin', 'l1']
+        assert inner_flops_type in ['margin', 'l1', 'bml1', 'ml1']
 
     def forward(self, x: torch.Tensor, y: torch.Tensor):
         alphas = self._model.last_alpha.squeeze()
@@ -35,7 +35,20 @@ class AdaptiveTokenLoss(nn.Module):
         masks = torch.stack(masks, 1)
         output_loss = (torch.abs(masks[:, -1].mean(-1) - alphas.squeeze()) - self.margin).relu()
 
-        if self.inner_flops_type == 'l1':
+        if self.inner_flops_type == 'ml1':
+            m = (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin).detach()
+            l1 = masks[:, :-1].mean(-1)
+
+            inner_loss = (m * l1).mean(-1)
+
+        elif self.inner_flops_type == 'bml1':
+            m = ((torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin) > 0).float()
+            l1 = masks[:, :-1].mean(-1)
+
+            inner_loss = (m * l1).mean(-1)
+
+        elif self.inner_flops_type == 'l1':
+            masks[:, :-1].mean(-1) * (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin)
             inner_loss = masks[:, :-1].mean(-1).mean(1)
         else:
             inner_loss = (torch.abs(masks[:, :-1].mean(-1) - alphas) - self.margin).relu().mean(1)

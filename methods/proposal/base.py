@@ -141,7 +141,6 @@ class SemanticVit(nn.Module):
         x = self.norm_pre(x)
         if self.grad_checkpointing and not torch.jit.is_scripting():
             x = checkpoint_seq(self.blocks, x)
-            print('scemo')
         else:
             prev_mask = None
             for b in self.blocks:

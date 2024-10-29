@@ -19,7 +19,7 @@ class AdaptiveTokenLoss(nn.Module):
         self.output_flops_w = output_flops_w
         self.inner_flops_type = inner_flops_type
         self._model = model
-        self.margin = 0
+        self.margin = margin
 
         assert inner_flops_type in ['margin', 'l1']
 

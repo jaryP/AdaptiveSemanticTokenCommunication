@@ -266,38 +266,55 @@ def main(cfg: DictConfig):
                 #     json.dump(all_results, f, ensure_ascii=False, indent=4,
                 #               cls=NpEncoder)
 
-        model.eval()
-        with torch.no_grad():
-            t, c = 0, 0
+        if 'final_evaluation' in cfg:
+            final_evaluation = cfg['final_evaluation']
 
-            for x, y in test_dataloader:
-                x, y = x.to(device), y.to(device)
+            all_results = {}
 
-                pred = model(x)
-                c += (pred.argmax(-1) == y).sum().item()
-                t += len(x)
+            for k, d in final_evaluation.items():
+                results = hydra.utils.instantiate(d, model=model, dataset=test_dataset)
+                if results is not None:
+                    all_results[k] = results
 
-            log.info(f'Model score: {c}, {t}, ({c / t})')
+                log.info(f'{k} {json.dumps(results)}')
 
-            for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+            with open(os.path.join(evaluation_results, f'final_evaluation_results.json'), 'w') as f:
+                json.dump(all_results, f, ensure_ascii=False, indent=4, cls=NpEncoder)
 
-                c, t = 0, 0
-                average_dropping = defaultdict(float)
-
-                for x, y in DataLoader(test_dataset, batch_size=1):
-                    x, y = x.to(device), y.to(device)
-
-                    pred = model(x, alpha=a)
-
-                    c += (pred.argmax(-1) == y).sum().item()
-                    t += len(x)
-
-                    for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
-                        average_dropping[i] += b.last_mask.shape[1]
-
-                log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                v = {k: v / t for k, v in average_dropping.items()}
-                log.info(f'Model budget {a} has average scoring: {v}')
+        # model.eval()
+        # semantic_evaluation(model, test_dataset)
+        #
+        # with torch.no_grad():
+        #     t, c = 0, 0
+        #
+        #     for x, y in test_dataloader:
+        #         x, y = x.to(device), y.to(device)
+        #
+        #         pred = model(x)
+        #         c += (pred.argmax(-1) == y).sum().item()
+        #         t += len(x)
+        #
+        #     log.info(f'Model score: {c}, {t}, ({c / t})')
+        #
+        #     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+        #
+        #         c, t = 0, 0
+        #         average_dropping = defaultdict(float)
+        #
+        #         for x, y in DataLoader(test_dataset, batch_size=1):
+        #             x, y = x.to(device), y.to(device)
+        #
+        #             pred = model(x, alpha=a)
+        #
+        #             c += (pred.argmax(-1) == y).sum().item()
+        #             t += len(x)
+        #
+        #             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
+        #                 average_dropping[i] += b.last_mask.shape[1]
+        #
+        #         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+        #         v = {k: v / t for k, v in average_dropping.items()}
+        #         log.info(f'Model budget {a} has average scoring: {v}')
 
         #     # if isinstance(model, HaltingAlgorithm):
         #     # with eval_mode(model), torch.no_grad():
@@ -493,6 +510,7 @@ def main(cfg: DictConfig):
         #         with open(os.path.join(experiment_path, 'flops.json'), 'w') as f:
         #             json.dump(model.flops, f, ensure_ascii=False, indent=4, cls=NpEncoder)
         #
+
 
 if __name__ == "__main__":
     main()

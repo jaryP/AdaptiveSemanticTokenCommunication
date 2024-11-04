@@ -45,7 +45,6 @@ defaults:
   - pretraining_pipeline: null
   - training_schema: null
   - method: null
-  - evaluation: null
   - final_evaluation: null
   - _self_
 

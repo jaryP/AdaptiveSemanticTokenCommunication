@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from flops_count import compute_flops
+from methods.flops_count import compute_flops
 from methods.proposal import AdaptiveBlock, SemanticVit
 
 

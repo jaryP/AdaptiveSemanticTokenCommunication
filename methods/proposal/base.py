@@ -12,11 +12,11 @@ class AdaptiveBlock(nn.Module):
         self._block = block
         self.num_patches = num_patches
 
-        self.fl = nn.Sequential(nn.Linear(dim, 1, bias=True)).to(next(self.parameters()).device)
-        self.fh = nn.Sequential(nn.Linear(dim, 1, bias=True)).to(next(self.parameters()).device)
+        self.fl = nn.Sequential(nn.Linear(dim, 1, bias=True), nn.Sigmoid()).to(next(self.parameters()).device)
+        self.fh = nn.Sequential(nn.Linear(dim, 1, bias=True), nn.Sigmoid()).to(next(self.parameters()).device)
 
-        self.fl[-1].bias.data.normal_(10, 0.1)
-        self.fh[-1].bias.data.normal_(-10, 0.1)
+        self.fl[-2].bias.data.normal_(5, 0.1)
+        self.fh[-2].bias.data.normal_(-5, 0.1)
 
         self.last_mask = None
 
@@ -35,10 +35,14 @@ class AdaptiveBlock(nn.Module):
         if alpha is None:
             return self._block(x), None
 
-        mask = self.get_mask(x[:, 1:-1])
+        # mask = self.get_mask(x[:, 1:-1])
+        mask = self.fl(x[:, 1:-1])
 
-        th = (self.fh(x[:, -2:-1])).sigmoid()
+        th = self.fh(x[:, -2:-1])
 
+        # torch.einsum('btd,btd->btt', mask, th)
+
+        # mask = torch.einsum('btd,bod->bt', mask / torch.linalg.norm(mask, 2, -1, keepdim=True), th / torch.linalg.norm(th, 2, -1, keepdim=True)) + 0.5
         # mask = torch.relu(mask - alpha) / (1 - alpha)
         mask = torch.relu(mask - th)
 
@@ -50,7 +54,7 @@ class AdaptiveBlock(nn.Module):
             self.last_mask = bmask.float()
 
             if mask.sum(1) == 2:
-                return x, None
+                return self._block(x), None
 
             x = x[bmask.expand_as(x)].view(1, -1, x.shape[-1])
             x = self._block(x)
@@ -61,16 +65,21 @@ class AdaptiveBlock(nn.Module):
 
             self.last_mask = mask
 
-            x = self._block(x * mask)
+            x = self._block(x * mask) * mask
 
         return x, mask
 
 
 class SemanticVit(nn.Module):
-    def __init__(self, model: VisionTransformer, use_budget_emb=False, *args, **kwargs):
+    def __init__(self, model: VisionTransformer, use_budget_emb=False, freeze_model=False,*args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._model = model
+
+        if freeze_model:
+            for p in self._model.parameters():
+                if p.requires_grad:
+                    p.requires_grad_(False)
 
         self.use_budget_emb = use_budget_emb
         if not use_budget_emb:

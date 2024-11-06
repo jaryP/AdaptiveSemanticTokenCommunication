@@ -84,6 +84,8 @@ def main(cfg: DictConfig):
     outer_experiment_path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     # outer_experiment_path = os.path.join(outer_experiment_path, path_hash)
 
+    log.info(f'Saving path: {outer_experiment_path}')
+
     for seed in range(training_schema.experiments):
 
         log.info(f'Experiment N{seed + 1}')
@@ -224,17 +226,9 @@ def main(cfg: DictConfig):
                     if scheduler is not None:
                         scheduler.step()
 
-                    model.eval()
                     with torch.no_grad():
-                        t, c = 0, 0
-
-                        for x, y in test_dataloader:
-                            x, y = x.to(device), y.to(device)
-
-                            pred = model(x)
-                            c += (pred.argmax(-1) == y).sum().item()
-                            t += len(x)
-
+                        model.eval()
+                        
                         if (epoch + 1) % 5 == 0:
                             for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
 
@@ -256,6 +250,15 @@ def main(cfg: DictConfig):
                                 log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
                                 v = {k: v / t for k, v in average_dropping.items()}
                                 log.info(f'Model budget {a} has average scoring: {v}')
+                        else:
+                            t, c = 0, 0
+
+                            for x, y in test_dataloader:
+                                x, y = x.to(device), y.to(device)
+
+                                pred = model(x)
+                                c += (pred.argmax(-1) == y).sum().item()
+                                t += len(x)
 
                     bar.set_postfix({'Test acc': c / t, 'Epoch loss': np.mean(epoch_losses)})
 

@@ -37,6 +37,9 @@ def get_hash(dictionary=None, *, _root_=None):
     if 'training_pipeline' in dictionary:
         del dictionary['training_pipeline']['schema']['experiments']
 
+    if 'final_evaluation' in dictionary:
+        del dictionary['final_evaluation']
+
     # https://death.andgravity.com/stable-hashing
     return str(hashlib.md5(json.dumps(dictionary,
                                       default=json_default,

@@ -46,6 +46,7 @@ defaults:
   - training_schema: null
   - method: null
   - final_evaluation: null
+  - serialization: null
   - _self_
 
 method_name: ${method_path:${method.model._target_}}

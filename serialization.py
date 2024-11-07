@@ -40,6 +40,9 @@ def get_hash(dictionary=None, *, _root_=None):
     if 'final_evaluation' in dictionary:
         del dictionary['final_evaluation']
 
+    if 'serialization' in dictionary:
+        del dictionary['serialization']
+
     # https://death.andgravity.com/stable-hashing
     return str(hashlib.md5(json.dumps(dictionary,
                                       default=json_default,

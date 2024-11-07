@@ -83,10 +83,8 @@ class SemanticVit(nn.Module):
 
         self.use_budget_emb = use_budget_emb
         if not use_budget_emb:
-            # self.register_parameter('budget_token_lower', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
             self.budget_token_lower = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
             self.budget_token_upper = nn.Parameter(torch.randn_like(self.cls_token) * 0.02)
-            # self.register_parameter('budget_token_upper', nn.Parameter(torch.randn_like(self.cls_token) * 0.02))
         else:
             self.budget_embs = nn.Embedding(100, len(self.cls_token.squeeze())).to(self.cls_token.device)
 
@@ -157,8 +155,10 @@ class SemanticVit(nn.Module):
                     x, prev_mask = b(x, prev_mask=prev_mask, alpha=alpha)
                     # prev_mask = None
                 else:
-                    prev_mask = None
-                    x = b(x)
+                    if prev_mask is not None:
+                        x = b(x * prev_mask) * prev_mask
+                    else:
+                        x = b(x)
 
         x = self.norm(x)
         return x

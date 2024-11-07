@@ -206,6 +206,8 @@ def main(cfg: DictConfig):
                                 desc='Model training')
                 epoch_losses = []
 
+                score = -1
+
                 for epoch in bar:
                     model.train()
                     for x, y in train_dataloader:
@@ -218,6 +220,7 @@ def main(cfg: DictConfig):
 
                         optimizer.zero_grad()
                         loss.backward()
+
                         if gradient_clipping_value is not None:
                             torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
 
@@ -225,6 +228,8 @@ def main(cfg: DictConfig):
 
                     if scheduler is not None:
                         scheduler.step()
+
+                    log.info(f'Training epoch {epoch} ended')
 
                     with torch.no_grad():
                         model.eval()
@@ -260,14 +265,11 @@ def main(cfg: DictConfig):
                                 c += (pred.argmax(-1) == y).sum().item()
                                 t += len(x)
 
-                    bar.set_postfix({'Test acc': c / t, 'Epoch loss': np.mean(epoch_losses)})
+                            score = c / t
+
+                    bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
                 torch.save(model.state_dict(), model_path)
-
-                # with open(os.path.join(experiment_path, 'training_results.json'),
-                #           'w') as f:
-                #     json.dump(all_results, f, ensure_ascii=False, indent=4,
-                #               cls=NpEncoder)
 
         if 'final_evaluation' in cfg:
             final_evaluation = cfg['final_evaluation']
@@ -283,236 +285,6 @@ def main(cfg: DictConfig):
 
             with open(os.path.join(evaluation_results, f'final_evaluation_results.json'), 'w') as f:
                 json.dump(all_results, f, ensure_ascii=False, indent=4, cls=NpEncoder)
-
-        # model.eval()
-        # semantic_evaluation(model, test_dataset)
-        #
-        # with torch.no_grad():
-        #     t, c = 0, 0
-        #
-        #     for x, y in test_dataloader:
-        #         x, y = x.to(device), y.to(device)
-        #
-        #         pred = model(x)
-        #         c += (pred.argmax(-1) == y).sum().item()
-        #         t += len(x)
-        #
-        #     log.info(f'Model score: {c}, {t}, ({c / t})')
-        #
-        #     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-        #
-        #         c, t = 0, 0
-        #         average_dropping = defaultdict(float)
-        #
-        #         for x, y in DataLoader(test_dataset, batch_size=1):
-        #             x, y = x.to(device), y.to(device)
-        #
-        #             pred = model(x, alpha=a)
-        #
-        #             c += (pred.argmax(-1) == y).sum().item()
-        #             t += len(x)
-        #
-        #             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
-        #                 average_dropping[i] += b.last_mask.shape[1]
-        #
-        #         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-        #         v = {k: v / t for k, v in average_dropping.items()}
-        #         log.info(f'Model budget {a} has average scoring: {v}')
-
-        #     # if isinstance(model, HaltingAlgorithm):
-        #     # with eval_mode(model), torch.no_grad():
-        #     #     old_metrics = [EvaluateAllExits(model=model),
-        #     #                HaltedFlops(model=model),
-        #     #                OptimalHalted(model=model),
-        #     #                OptimalHaltedFlops(model=model),
-        #     #                HaltedAccuracy(model=model)]
-        #     #
-        #     # for x, y in test_dataloader:
-        #     #     x = x.to(device)
-        #     #     y = y.to(device)
-        #     #
-        #     #     d = model(x)
-        #     #
-        #     #     with halted_inference_context(model, 0.1) as halted_model:
-        #     #         d = halted_model(x)
-        #     #
-        #     #     for m in metrics:
-        #     #         m.update(target=y, **d)
-        #     #
-        #     # for m in metrics:
-        #     #     print(m.compute())
-        #
-        # # def unpack(obj):
-        # #     return {str(o): unpack(o) for o in obj.get_items()}
-        #
-        # def unpack(dic, keys, value):
-        #     for key in keys[:-1]:
-        #         dic = dic.setdefault(key, {})
-        #     dic[keys[-1]] = value
-        #
-        # def mask_dictionary(d, mask):
-        #     for k, v in d.items():
-        #         if isinstance(v, dict):
-        #             mask_dictionary(v, mask)
-        #         elif isinstance(v, torch.Tensor):
-        #             v = v[mask]
-        #             d[k] = v
-        #         elif isinstance(v, np.ndarray):
-        #             d[k] = v[mask.cpu().numpy()]
-        #
-        # if isinstance(model, HaltingAlgorithm):
-        #     thresholding_results = {}
-        #     with eval_mode(model), torch.no_grad():
-        #         testing_protocol = cfg.get('final_evaluation', None)
-        #
-        #         if testing_protocol is not None:
-        #             outer_evaluation_results = {}
-        #
-        #             for k, d in testing_protocol.items():
-        #                 if os.path.exists(os.path.join(evaluation_results, f'{k}.json')):
-        #                     continue
-        #
-        #                 inner_evaluation_results = {}
-        #
-        #                 parameters = d.get('parameters', None)
-        #                 parameters = OmegaConf.to_container(parameters, resolve=True)
-        #
-        #                 other_parameters = {k: v for k, v in parameters.items() if not isinstance(v, Sequence)}
-        #                 parameters = {k: v for k, v in parameters.items() if isinstance(v, Sequence)}
-        #
-        #                 keys = None
-        #                 # all_parameters = product(parameters.values(), repeat=len(parameters))
-        #
-        #                 halting_dict = d.get('halting_mechanism', None)
-        #
-        #                 for p in tqdm.tqdm(ParameterGrid(parameters)):
-        #                     if keys is None:
-        #                         keys = list(p.keys())
-        #
-        #                     # p.update(other_parameters)
-        #                     # pp = deepcopy(0)
-        #                     testing_model = hydra.utils.instantiate(halting_dict,
-        #                                                             model=model.model,
-        #                                                             enable_halting=True,
-        #                                                             **p,
-        #                                                             **other_parameters)
-        #                     # testing_model.enable_halting = True
-        #
-        #                     metrics = [
-        #                         # EvaluateAllExits(model=testing_model),
-        #                         HaltedFlops(model=testing_model),
-        #                         # OptimalHalted(model=testing_model),
-        #                         OptimalHaltedFlops(model=testing_model),
-        #                         HaltedAccuracy(model=testing_model)]
-        #
-        #                     discarded_metrics = None
-        #
-        #                     for x, y in test_dataloader:
-        #                         x = x.to(device)
-        #                         y = y.to(device)
-        #
-        #                         d = testing_model(x)
-        #
-        #                         if 'drop_mask' in d:
-        #                             if discarded_metrics is None:
-        #                                 discarded_metrics = [
-        #                                     HaltedFlops(model=testing_model),
-        #                                     HaltedAccuracy(model=testing_model)]
-        #
-        #                             mask = d['drop_mask']
-        #                             dd = deepcopy(d)
-        #                             # d1 = deepcopy(d)
-        #                             mask_dictionary(dd, mask)
-        #
-        #                             for m in discarded_metrics:
-        #                                 m.update(target=y[mask], **dd)
-        #
-        #                             mask_dictionary(d, ~mask)
-        #
-        #                             for m in metrics:
-        #                                 m.update(target=y[~mask], **d)
-        #                         else:
-        #                             for m in metrics:
-        #                                 m.update(target=y, **d)
-        #
-        #                     metrics_results = {}
-        #
-        #                     if discarded_metrics is not None:
-        #                         for m in discarded_metrics:
-        #                             metrics_results['discarded_' + str(m)] = m.compute()
-        #                             m.reset()
-        #
-        #                         for m in metrics:
-        #                             metrics_results[str(m)] = m.compute()
-        #                             m.reset()
-        #                     else:
-        #                         for m in metrics:
-        #                             metrics_results[str(m)] = m.compute()
-        #                             m.reset()
-        #
-        #                     # unpack(inner_evaluation_results, list(p.values()), metrics_results)
-        #                     #
-        #                     # unpack(inner_evaluation_results, list(p.values()), metrics_results)
-        #                     inner_evaluation_results[str(tuple(p.values()))] = metrics_results
-        #
-        #                 inner_evaluation_results = {'parameters': keys, 'results': inner_evaluation_results}
-        #                 outer_evaluation_results[k] = inner_evaluation_results
-        #
-        #                 with open(os.path.join(evaluation_results, f'{k}.json'), 'w') as f:
-        #                     json.dump(inner_evaluation_results, f, ensure_ascii=False, indent=4, cls=NpEncoder)
-        #
-        #             with open(os.path.join(experiment_path, f'testing_results.json'), 'w') as f:
-        #                 json.dump(outer_evaluation_results, f, ensure_ascii=False, indent=4, cls=NpEncoder)
-        #
-        # if model.model.__class__.__name__ == CumulativeScoreModel.__name__ and dev_dataset is not None:
-        #     def_dataloader = datalaoder_wrapper(dev_dataset)
-        #
-        #     bins_scores = defaultdict(lambda: defaultdict(float))
-        #     bins_counters = defaultdict(float)
-        #
-        #     with eval_mode(model), torch.no_grad():
-        #         for x, y in def_dataloader:
-        #             x, y = x.to(device), y.to(device)
-        #
-        #             output = model(x)
-        #
-        #             prior = output['prior']
-        #             exits = {k: v.argmax(-1) for k, v in output[Dict_Exits_Key].items()}
-        #             final_exit = output[Final_Exit_Key].argmax(-1)
-        #
-        #             # prior = torch.softmax(prior, -1)
-        #             entropy = (-(prior * prior.log()).sum(-1) / math.log(prior.shape[-1])).cpu().numpy()
-        #
-        #             bins = np.digitize(entropy, bins=np.linspace(0, 1, 10, endpoint=True), right=True)
-        #
-        #             for h in np.unique(bins):
-        #                 h = int(h)
-        #                 mask = bins == h
-        #                 bins_counters[h] += mask.sum().item()
-        #
-        #                 for ee, v in exits.items():
-        #                     bins_scores[h][ee] += (v[mask] == y[mask]).sum().item()
-        #
-        #                 bins_scores[h][Final_Exit_Key] += (final_exit[mask] == y[mask]).sum().item()
-        #
-        #         results = defaultdict(lambda: defaultdict(float))
-        #
-        #         for k in bins_counters:
-        #             for v in bins_scores[k]:
-        #                 results[k][v] = bins_scores[k][v] / bins_counters[k]
-        #
-        #             a = 0
-        #             # bins = torch.histogram(entropy, bins=10, range=(0, 1))
-        #
-        #         with open(os.path.join(experiment_path, 'entropy.json'), 'w') as f:
-        #             json.dump(dict(results), f, ensure_ascii=False, indent=4, cls=NpEncoder)
-        #
-        #         with open(os.path.join(experiment_path, 'counters.json'), 'w') as f:
-        #             json.dump(dict(bins_counters), f, ensure_ascii=False, indent=4, cls=NpEncoder)
-        #
-        #         with open(os.path.join(experiment_path, 'flops.json'), 'w') as f:
-        #             json.dump(model.flops, f, ensure_ascii=False, indent=4, cls=NpEncoder)
-        #
 
 
 if __name__ == "__main__":

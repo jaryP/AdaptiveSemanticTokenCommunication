@@ -23,3 +23,4 @@ source activate eep
 #srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=ml1 method.loss.inner_flops_w=0.1 device=0
 srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=ml1 method.loss.inner_flops_w=0.5  final_evaluation=semantic device=0
 srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=ml1 method.loss.inner_flops_w=1 final_evaluation=semantic device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=ml1 method.loss.inner_flops_w=1.5 final_evaluation=semantic device=0

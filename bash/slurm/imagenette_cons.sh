@@ -1,10 +1,10 @@
 #!/bin/sh
 #SBATCH -A IscrC_BEVITIN
 #SBATCH -p boost_usr_prod
-#SBATCH --time=72:00:00
+#SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=6g_adaptive_cc
 #SBATCH --out=./sout/cons.out

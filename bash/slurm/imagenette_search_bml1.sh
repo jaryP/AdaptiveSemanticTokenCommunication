@@ -29,6 +29,6 @@ for inner_w in 0 0.1 0.5 1 1.5 2
 do
   for out_w in 0.1 0.5 1 1.5 2
   do
-    srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=bml1 method.loss.inner_flops_w=$inner_w method.loss.output_flops_w=$out_w  final_evaluation=semantic device=0
+    srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=bml1 method.loss.inner_flops_w=$inner_w method.loss.output_flops_w=$out_w  final_evaluation=semantic +jscc=proposal device=0
   done
 done

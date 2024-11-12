@@ -298,8 +298,6 @@ def main(cfg: DictConfig):
                         model.load_state_dict(model_dict)
                         log.info(f'Fine tuned model loaded')
                     else:
-
-
                         gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
 
                         loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
@@ -313,8 +311,7 @@ def main(cfg: DictConfig):
                                                                 optimizer=optimizer)
 
                         bar = tqdm.tqdm(range(experiment_cfg.epochs),
-                                        leave=False,
-                                        desc='Comm model training')
+                                        leave=False, desc='Fine tuning the model')
                         epoch_losses = []
 
                         score = -1

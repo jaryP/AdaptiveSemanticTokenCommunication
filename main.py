@@ -11,12 +11,13 @@ import numpy as np
 import tqdm.auto as tqdm
 from omegaconf import DictConfig, OmegaConf
 import torch
+from torch import nn
 
 from torch.utils.data import DataLoader
 
 from methods.proposal import AdaptiveBlock
 from serialization import process_saving_path, get_hash
-from utils import get_pretrained_model
+from utils import get_pretrained_model, get_encoder_decoder, BaseRealToComplex, BaseComplexToReal, CommunicationPipeline
 
 
 class NpEncoder(json.JSONEncoder):
@@ -271,20 +272,231 @@ def main(cfg: DictConfig):
 
                 torch.save(model.state_dict(), model_path)
 
-        if 'final_evaluation' in cfg:
-            final_evaluation = cfg['final_evaluation']
+        if 'jscc' in cfg:
+            for experiment_key, experiment_cfg in cfg['jscc'].items():
+                comm_experiment_path = os.path.join(experiment_path, experiment_key)
+                os.makedirs(comm_experiment_path, exist_ok=True)
 
-            all_results = {}
+                splitting_point = experiment_cfg.splitting_point
 
-            for k, d in final_evaluation.items():
-                results = hydra.utils.instantiate(d, model=model, dataset=test_dataset)
-                if results is not None:
-                    all_results[k] = results
+                if experiment_cfg.get('unwrap_after', False):
+                    for i, b in enumerate(model.blocks[splitting_point:]):
+                        if hasattr(b, 'base_block'):
+                           model.blocks[i] = b.base_block
 
-                log.info(f'{k} {json.dumps(results)}')
+                if experiment_cfg.get('unwrap_before', False):
+                    for i, b in enumerate(model.blocks[:splitting_point]):
+                        if hasattr(b, 'base_block'):
+                            model.blocks[i] = b.base_block
+                
+                fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
 
-            with open(os.path.join(evaluation_results, f'final_evaluation_results.json'), 'w') as f:
-                json.dump(all_results, f, ensure_ascii=False, indent=4, cls=NpEncoder)
+                if fine_tuning_cfg is not None:
+                    if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
+                        model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
+                                                map_location=device)
+                        model.load_state_dict(model_dict)
+                        log.info(f'Fine tuned model loaded')
+                    else:
+
+
+                        gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
+
+                        loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
+
+                        optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                            params=model.parameters())
+
+                        scheduler = None
+                        if 'scheduler' in cfg:
+                            scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
+                                                                optimizer=optimizer)
+
+                        bar = tqdm.tqdm(range(experiment_cfg.epochs),
+                                        leave=False,
+                                        desc='Comm model training')
+                        epoch_losses = []
+
+                        score = -1
+
+                        for epoch in bar:
+                            model.train()
+                            for x, y in train_dataloader:
+                                x, y = x.to(device), y.to(device)
+
+                                pred = model(x)
+                                loss = loss_f(pred, y)
+
+                                epoch_losses.append(loss.item())
+
+                                optimizer.zero_grad()
+                                loss.backward()
+
+                                if gradient_clipping_value is not None:
+                                    torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
+
+                                optimizer.step()
+
+                            if scheduler is not None:
+                                scheduler.step()
+
+                            log.info(f'Training epoch {epoch} ended')
+
+                            with torch.no_grad():
+                                model.eval()
+
+                                if (epoch + 1) % 5 == 0:
+                                    for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+
+                                        c, t = 0, 0
+                                        average_dropping = defaultdict(float)
+
+                                        for x, y in DataLoader(test_dataset, batch_size=1):
+                                            x, y = x.to(device), y.to(device)
+
+                                            pred = model(x, alpha=a)
+
+                                            c += (pred.argmax(-1) == y).sum().item()
+                                            t += len(x)
+
+                                            for i, b in enumerate(
+                                                    [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                                                     b.last_mask is not None]):
+                                                average_dropping[i] += b.last_mask.shape[1]
+
+                                        log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                                        v = {k: v / t for k, v in average_dropping.items()}
+                                        log.info(f'Model budget {a} has average scoring: {v}')
+                                else:
+                                    t, c = 0, 0
+
+                                    for x, y in test_dataloader:
+                                        x, y = x.to(device), y.to(device)
+
+                                        pred = model(x)
+                                        c += (pred.argmax(-1) == y).sum().item()
+                                        t += len(x)
+
+                                    score = c / t
+
+                            bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+
+                        torch.save(model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
+
+                comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
+                # os.makedirs(comm_model_path, exist_ok=True)
+
+                if os.path.exists(comm_model_path):
+                    model_dict = torch.load(comm_model_path, map_location=device)
+                    model.load_state_dict(model_dict)
+                    log.info(f'Comm model loaded')
+                else:
+                    gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
+
+                    loss_f = nn.CrossEntropyLoss()
+
+                    if experiment_cfg.get('freeze_model', False):
+                        for p in model.parameters():
+                            if p.requires_grad:
+                                p.requires_grad_(False)
+
+                    blocks_before = model.blocks[:splitting_point]
+                    blocks_after = model.blocks[splitting_point:]
+
+                    channel = experiment_cfg.get('channel', None)
+
+                    if channel is not None:
+                        channel = hydra.utils.instantiate(channel)
+
+                    real_part, complex_part, decoder = get_encoder_decoder(input_size=model.num_features,
+                                                                           n_layers=3,
+                                                                           compression=1)
+
+                    encoder = BaseRealToComplex(real_part, complex_part)
+                    decoder = BaseComplexToReal(decoder)
+
+                    communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
+
+                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+
+                    optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                        params=model.parameters())
+
+                    scheduler = None
+                    if 'scheduler' in cfg:
+                        scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
+                                                            optimizer=optimizer)
+
+                    bar = tqdm.tqdm(range(experiment_cfg.epochs),
+                                    leave=False,
+                                    desc='Comm model training')
+                    epoch_losses = []
+
+                    score = -1
+
+                    for epoch in bar:
+                        model.train()
+                        for x, y in train_dataloader:
+                            x, y = x.to(device), y.to(device)
+
+                            pred = model(x)
+                            loss = loss_f(pred, y)
+
+                            epoch_losses.append(loss.item())
+
+                            optimizer.zero_grad()
+                            loss.backward()
+
+                            if gradient_clipping_value is not None:
+                                torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
+
+                            optimizer.step()
+
+                        if scheduler is not None:
+                            scheduler.step()
+
+                        log.info(f'Training epoch {epoch} ended')
+
+                        with torch.no_grad():
+                            model.eval()
+
+                            if (epoch + 1) % 5 == 0:
+                                for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+
+                                    c, t = 0, 0
+                                    average_dropping = defaultdict(float)
+
+                                    for x, y in DataLoader(test_dataset, batch_size=1):
+                                        x, y = x.to(device), y.to(device)
+
+                                        pred = model(x, alpha=a)
+
+                                        c += (pred.argmax(-1) == y).sum().item()
+                                        t += len(x)
+
+                                        for i, b in enumerate(
+                                                [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                                                 b.last_mask is not None]):
+                                            average_dropping[i] += b.last_mask.shape[1]
+
+                                    log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                                    v = {k: v / t for k, v in average_dropping.items()}
+                                    log.info(f'Model budget {a} has average scoring: {v}')
+                            else:
+                                t, c = 0, 0
+
+                                for x, y in test_dataloader:
+                                    x, y = x.to(device), y.to(device)
+
+                                    pred = model(x)
+                                    c += (pred.argmax(-1) == y).sum().item()
+                                    t += len(x)
+
+                                score = c / t
+
+                        bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+
+                    torch.save(model.state_dict(), comm_model_path)
 
 
 if __name__ == "__main__":

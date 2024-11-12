@@ -66,12 +66,14 @@ class OpenChannel(nn.Module):
 class GaussianNoiseChannel(CleanChannel):
     def __init__(self,
                  snr: Union[float, Tuple[float, float]],
+                 use_training_snr=True,
                  dims=-1,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         assert snr is not None
         self._base_snr = snr
+        self.use_training_snr = use_training_snr
 
         self._snr = 0
 
@@ -102,6 +104,9 @@ class GaussianNoiseChannel(CleanChannel):
         return x + noise
 
     def forward(self, x: torch.Tensor, snr=None):
+        if self.training and not self.use_training_snr:
+            return x
+
         if self.snr is None:
             return x
 

@@ -20,6 +20,10 @@ class AdaptiveBlock(nn.Module):
 
         self.last_mask = None
 
+    @property
+    def base_block(self):
+        return self._block
+
     def __getattr__(self, item):
         try:
             return super().__getattr__(item)

@@ -1,5 +1,6 @@
 import math
 import os
+from copy import deepcopy
 from functools import lru_cache
 from typing import Callable, Tuple
 
@@ -122,7 +123,7 @@ def get_pretrained_model(cfg, model, device):
     return model
 
 
-def get_encoder_decoder(input_size, compression, n_layers=2):
+def get_encoder_decoder(input_size, compression=1, n_layers=2):
 
     compressions = np.linspace(1, compression, num=n_layers, endpoint=True)
     encoder = []
@@ -144,4 +145,82 @@ def get_encoder_decoder(input_size, compression, n_layers=2):
     decoder = decoder[-2::-1]
     encoder = encoder[:-1]
 
-    return nn.Sequential(*encoder), nn.Sequential(*decoder)
+    encoder, decoder = nn.Sequential(*encoder), nn.Sequential(*decoder)
+
+    encoder1 = deepcopy(encoder)
+    for m in encoder1.modules():
+        if hasattr(m, 'reset_parameters'):
+            m.reset_parameters()
+
+    return encoder, encoder1, decoder
+
+
+class BaseRealToComplex(nn.Module):
+    def __init__(self, real_module, complex_module, normalize=True, transpose=False, sincos=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.r_fl, self.c_fl = real_module, complex_module
+
+        self.normalize = normalize
+        self.transpose = transpose
+        self.sincos = sincos
+
+    def forward(self, x, *args, **kwargs):
+        if self.transpose:
+            x = x.permute(0, 2, 1)
+
+        a, b = self.r_fl(x), self.c_fl(x)
+
+        if self.sincos:
+            a, b = torch.cos(a), torch.sin(b)
+
+        x = torch.complex(a, b)
+
+        if self.normalize:
+            x = x / torch.norm(x, 2, -1, keepdim=True)
+
+        return x
+
+
+class BaseComplexToReal(nn.Module):
+    def __init__(self, decoder, transpose=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.d_f = decoder
+        self.transpose = transpose
+
+    def forward(self, x=None, *args, **kwargs):
+        x = self.d_f(x.abs())
+
+        if self.transpose:
+            x = x.permute(0, 2, 1)
+
+        return x
+
+
+class CommunicationPipeline(nn.Module):
+    def __init__(self, encoder, channel, decoder, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.encoder = encoder
+        self.decoder = decoder
+        self.channel = channel
+
+    def forward(self, x, snr=None):
+        if not self.training:
+            mask = (x.sum(dim=-1, keepdim=True) != 0).float()
+            x = self.encoder(x)
+
+            if self.channel is not None:
+                x = self.channel(x * mask)
+
+            decoded = self.decoder(x) * mask
+        else:
+            x = self.encoder(x)
+
+            if self.channel is not None:
+                x = self.channel(x)
+
+            decoded = self.decoder(x)
+
+        return decoded

@@ -237,8 +237,9 @@ def main(cfg: DictConfig):
 
                     with torch.no_grad():
                         model.eval()
-                        
+
                         if (epoch + 1) % 5 == 0:
+                            continue
                             for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
 
                                 c, t = 0, 0

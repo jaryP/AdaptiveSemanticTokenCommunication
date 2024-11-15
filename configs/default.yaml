@@ -5,7 +5,8 @@ core:
 
 hydra:
   run:
-    dir: ${core.results_path}/${dataset_name}/${method_name}/${to_hash:}
+    dir: ${core.results_path}/${get_path:}/${to_hash:}
+  #    dir: ${core.results_path}/${dataset_name}/${method_name}/${to_hash:}
 #    dir: ${core.results_path}
   #  sweep:
 #    dir: results/multirun/${scenario.scenario}/${method.save_name}
@@ -46,12 +47,12 @@ defaults:
   - training_schema: null
   - method: null
   - final_evaluation: null
-  - serialization: null
+  - serialization: default
   - _self_
 
-method_name: ${method_path:${method.model._target_}}
+#method_name: ${method_path:${method.model._target_}}
 ## loss_name: ${method_path:${training_schema._target_}}
-dataset_name: ${method_path:${training_pipeline.dataset.train._target_}}
+#dataset_name: ${method_path:${training_pipeline.dataset.train._target_}}
 #channel_name: None
 
 device: null

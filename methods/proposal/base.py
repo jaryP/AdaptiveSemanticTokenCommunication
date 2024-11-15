@@ -75,7 +75,13 @@ class AdaptiveBlock(nn.Module):
 
 
 class SemanticVit(nn.Module):
-    def __init__(self, model: VisionTransformer, use_budget_emb=False, freeze_model=False,*args, **kwargs):
+    def __init__(self,
+                 model: VisionTransformer,
+                 use_budget_emb=False,
+                 freeze_model=False,
+                 blocks_to_transform=None,
+                 *args, **kwargs):
+
         super().__init__(*args, **kwargs)
 
         self._model = model
@@ -92,7 +98,12 @@ class SemanticVit(nn.Module):
         else:
             self.budget_embs = nn.Embedding(100, len(self.cls_token.squeeze())).to(self.cls_token.device)
 
-        for i, b in enumerate(self.blocks):
+        if blocks_to_transform is None:
+            blocks = self.blocks
+        else:
+            blocks = self.blocks[:blocks_to_transform]
+
+        for i, b in enumerate(blocks):
             if i == 0:
                 continue
             self.blocks[i] = AdaptiveBlock(block=b, dim=self.cls_token.shape[-1],
@@ -159,6 +170,7 @@ class SemanticVit(nn.Module):
                     x, prev_mask = b(x, prev_mask=prev_mask, alpha=alpha)
                     # prev_mask = None
                 else:
+                    # TODO: fix when BS = 1 and block is not the last
                     if prev_mask is not None:
                         x = b(x * prev_mask) * prev_mask
                     else:

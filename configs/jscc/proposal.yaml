@@ -1,6 +1,6 @@
 gaussian_noise:
-  fine_tuning:
-    epochs: 100
+#  fine_tuning:
+#    epochs: 100
   splitting_point: 6
   unwrap_after: Yes
   unwrap_before: No
@@ -10,15 +10,24 @@ gaussian_noise:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [-10, 10]
     use_training_snr: Yes
-gaussian_noise_robust:
-  splitting_point: 6
-  unwrap_after: Yes
-  unwrap_before: No
-  epochs: 100
-  fine_tuning:
-    epochs: 100
-  freeze_model: Yes
-  channel:
-    _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
-    use_training_snr: No
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.25
+    n_layers: 3
+    normalize: Yes
+  decoder:
+    _target_: comm.pipeline.ABSComplexToRealNN
+    n_layers: 3
+    normalize: Yes
+#gaussian_noise_robust:
+#  splitting_point: 6
+#  unwrap_after: Yes
+#  unwrap_before: No
+#  epochs: 100
+#  fine_tuning:
+#    epochs: 100
+#  freeze_model: Yes
+#  channel:
+#    _target_: comm.channel.GaussianNoiseChannel
+#    snr: [ -10, 10 ]
+#    use_training_snr: No

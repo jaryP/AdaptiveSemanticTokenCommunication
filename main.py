@@ -16,8 +16,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from methods.proposal import AdaptiveBlock
-from serialization import process_saving_path, get_hash
+from serialization import process_saving_path, get_hash, get_path
 from utils import get_pretrained_model, get_encoder_decoder, BaseRealToComplex, BaseComplexToReal, CommunicationPipeline
+from methods.flops_count import compute_flops
 
 
 class NpEncoder(json.JSONEncoder):
@@ -36,13 +37,14 @@ class NpEncoder(json.JSONEncoder):
 #
 #     return '__'.join(s[1] for s in ll)
 
-def prova(prova, *, _root_):
-    return None
+# def prova(prova, *, _root_):
+#     return None
 
+# OmegaConf.register_new_resolver("to_hash", get_hash)
+# OmegaConf.register_new_resolver("method_path", lambda x: x.split('.')[-1] if x is not None else 'null')
+# OmegaConf.register_new_resolver("process_saving_path", process_saving_path)
 OmegaConf.register_new_resolver("to_hash", get_hash)
-OmegaConf.register_new_resolver("method_path", lambda x: x.split('.')[-1] if x is not None else 'null')
-OmegaConf.register_new_resolver("process_saving_path", process_saving_path)
-
+OmegaConf.register_new_resolver("get_path", get_path)
 
 @hydra.main(config_path="configs",
             version_base='1.2',
@@ -151,7 +153,7 @@ def main(cfg: DictConfig):
 
             pre_cfg['model'] = OmegaConf.to_container(cfg.model, resolve=True)
 
-            hash_path = get_hash(pre_cfg)
+            hash_path = get_hash(dictionary=pre_cfg)
 
             pre_trained_path = os.path.join(cfg.core.pretrained_root, hash_path)
             os.makedirs(pre_trained_path, exist_ok=True)
@@ -175,13 +177,14 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
+            # input(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0])
+
             log.info(f'Pre trained model score: {c}, {t}, ({c / t})')
             model = model.cpu()
 
         model = model.to(device)
 
         model = hydra.utils.instantiate(cfg.method.model, model=model)
-        # model = SemanticVit(model)
 
         if 'training_pipeline' in cfg:
             if os.path.exists(model_path):
@@ -273,22 +276,76 @@ def main(cfg: DictConfig):
                 torch.save(model.state_dict(), model_path)
 
         if 'jscc' in cfg:
+
+            # channel = GaussianNoiseChannel(snr=(-50, 50))
+            #
+            # model.blocks = nn.Sequential(*model.blocks, channel)
+            #
+            # model.eval()
+            # channel_results = defaultdict(dict)
+            #
+            # last_block = [b for b in model.blocks if isinstance(b, AdaptiveBlock)][-1]
+            #
+            # for alpha in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+            #     average_masks = 0
+            #
+            #     for snr in np.arange(-50, 50, 5):
+            #         channel.snr = snr
+            #
+            #         c, t = 0, 0
+            #         band = 0
+            #
+            #         for x, y in DataLoader(test_dataset, batch_size=32, shuffle=True):
+            #             x = x.to(device)
+            #
+            #             pred = model(x, alpha=alpha)
+            #             band += pred.shape[1]
+            #
+            #             average_masks += ((last_block.last_mask > 0).float().sum(1) / 2 * 198).sum()
+            #
+            #             c += (pred.argmax(-1).cpu() == y).sum().item()
+            #             t += len(x)
+            #
+            #         average_masks = average_masks / t
+            #         channel_results[int(snr)][alpha] = (c / t, average_masks.item())
+            #         print(snr, alpha, channel_results[int(snr)][alpha])
+            #
+            # with open(f'accuracy_results.json', 'w') as f:
+            #     json.dump(channel_results, f, cls=NpEncoder)
+            #
+            # exit()
+
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 comm_experiment_path = os.path.join(experiment_path, experiment_key)
                 os.makedirs(comm_experiment_path, exist_ok=True)
 
                 splitting_point = experiment_cfg.splitting_point
 
-                if experiment_cfg.get('unwrap_after', False):
-                    for i, b in enumerate(model.blocks[splitting_point:]):
-                        if hasattr(b, 'base_block'):
-                           model.blocks[i] = b.base_block
+                if splitting_point > 0:
+                    # splitting_point = splitting_point + 1
 
-                if experiment_cfg.get('unwrap_before', False):
-                    for i, b in enumerate(model.blocks[:splitting_point]):
-                        if hasattr(b, 'base_block'):
-                            model.blocks[i] = b.base_block
-                
+                    if experiment_cfg.get('unwrap_after', False):
+                        for i, b in enumerate(model.blocks[splitting_point:]):
+                            if hasattr(b, 'base_block'):
+                               model.blocks[i] = b.base_block
+
+                    if experiment_cfg.get('unwrap_before', False):
+                        for i, b in enumerate(model.blocks[:splitting_point]):
+                            if hasattr(b, 'base_block'):
+                                model.blocks[i] = b.base_block
+
+                    blocks_before = model.blocks[:splitting_point]
+                    blocks_after = model.blocks[splitting_point:]
+
+                else:
+                    blocks_before = model.blocks
+                    blocks_after = None
+
+                    if experiment_cfg.get('unwrap_after', False):
+                        for i, b in enumerate(model.blocks):
+                            if hasattr(b, 'base_block'):
+                               model.blocks[i] = b.base_block
+
                 fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
 
                 if fine_tuning_cfg is not None:
@@ -383,6 +440,22 @@ def main(cfg: DictConfig):
                 comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
                 # os.makedirs(comm_model_path, exist_ok=True)
 
+                encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=model.num_features)
+                decoder = hydra.utils.instantiate(experiment_cfg.decoder, input_size=encoder.output_size,
+                                                  output_size=model.num_features)
+
+                channel = experiment_cfg.get('channel', None)
+
+                if channel is not None:
+                    channel = hydra.utils.instantiate(channel)
+
+                communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
+
+                if blocks_after is not None:
+                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                else:
+                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
+
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
                     model.load_state_dict(model_dict)
@@ -393,31 +466,40 @@ def main(cfg: DictConfig):
                     loss_f = nn.CrossEntropyLoss()
 
                     if experiment_cfg.get('freeze_model', False):
-                        for p in model.parameters():
+                        for p in blocks_before.parameters():
                             if p.requires_grad:
                                 p.requires_grad_(False)
 
-                    blocks_before = model.blocks[:splitting_point]
-                    blocks_after = model.blocks[splitting_point:]
-
-                    channel = experiment_cfg.get('channel', None)
-
-                    if channel is not None:
-                        channel = hydra.utils.instantiate(channel)
-
-                    real_part, complex_part, decoder = get_encoder_decoder(input_size=model.num_features,
-                                                                           n_layers=3,
-                                                                           compression=1)
-
-                    encoder = BaseRealToComplex(real_part, complex_part)
-                    decoder = BaseComplexToReal(decoder)
-
-                    communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
-
-                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
-
+                    #     optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                    #                                         params=communication_pipeline.parameters())
+                    # else:
                     optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
                                                         params=model.parameters())
+
+                    # blocks_before = model.blocks[:splitting_point]
+                    # blocks_after = model.blocks[splitting_point:]
+
+                    # channel = experiment_cfg.get('channel', None)
+                    #
+                    # if channel is not None:
+                    #     channel = hydra.utils.instantiate(channel)
+                    #
+                    # real_part, complex_part, decoder = get_encoder_decoder(input_size=model.num_features,
+                    #                                                        n_layers=3,
+                    #                                                        compression=0.25)
+                    #
+                    # encoder = BaseRealToComplex(real_part, complex_part)
+                    # decoder = BaseComplexToReal(decoder)
+                    #
+                    # communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
+                    #
+                    # if blocks_after is not None:
+                    #     model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                    # else:
+                    #     model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
+
+                    # optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                    #                                     params=model.parameters())
 
                     scheduler = None
                     if 'scheduler' in cfg:

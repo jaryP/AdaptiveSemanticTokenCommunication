@@ -116,10 +116,14 @@ def get_path(*to_add, dictionary=None, _root_=None):
     values_to_prepend = serialization.get('values_to_prepend', [])
     if isinstance(values_to_prepend, str):
         values_to_prepend = [values_to_prepend]
+    elif values_to_prepend is None:
+        values_to_prepend = []
 
     values_to_append = serialization.get('values_to_append', [])
     if isinstance(values_to_append, str):
         values_to_append = [values_to_append]
+    elif values_to_append is None:
+        values_to_append = []
 
     paths = values_to_prepend + paths + values_to_append
 

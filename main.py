@@ -541,27 +541,28 @@ def main(cfg: DictConfig):
                             model.eval()
 
                             if (epoch + 1) % 5 == 0:
-                                for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-
-                                    c, t = 0, 0
-                                    average_dropping = defaultdict(float)
-
-                                    for x, y in DataLoader(test_dataset, batch_size=1):
-                                        x, y = x.to(device), y.to(device)
-
-                                        pred = model(x, alpha=a)
-
-                                        c += (pred.argmax(-1) == y).sum().item()
-                                        t += len(x)
-
-                                        for i, b in enumerate(
-                                                [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                                                 b.last_mask is not None]):
-                                            average_dropping[i] += b.last_mask.shape[1]
-
-                                    log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                                    v = {k: v / t for k, v in average_dropping.items()}
-                                    log.info(f'Model budget {a} has average scoring: {v}')
+                                pass
+                                # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                                #
+                                #     c, t = 0, 0
+                                #     average_dropping = defaultdict(float)
+                                #
+                                #     for x, y in DataLoader(test_dataset, batch_size=1):
+                                #         x, y = x.to(device), y.to(device)
+                                #
+                                #         pred = model(x, alpha=a)
+                                #
+                                #         c += (pred.argmax(-1) == y).sum().item()
+                                #         t += len(x)
+                                #
+                                #         for i, b in enumerate(
+                                #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                                #                  b.last_mask is not None]):
+                                #             average_dropping[i] += b.last_mask.shape[1]
+                                #
+                                #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                                #     v = {k: v / t for k, v in average_dropping.items()}
+                                #     log.info(f'Model budget {a} has average scoring: {v}')
                             else:
                                 t, c = 0, 0
 

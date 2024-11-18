@@ -276,6 +276,8 @@ def main(cfg: DictConfig):
 
                 torch.save(model.state_dict(), model_path)
 
+            # TODO: scrivere final evaluation
+
         if 'jscc' in cfg:
 
             # channel = GaussianNoiseChannel(snr=(-50, 50))
@@ -514,8 +516,13 @@ def main(cfg: DictConfig):
 
                     score = -1
 
+                    blocks_before.eval()
+
                     for epoch in bar:
-                        model.train()
+                        communication_pipeline.train()
+                        if blocks_after is not None:
+                            blocks_after.train()
+
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)
 
@@ -538,7 +545,9 @@ def main(cfg: DictConfig):
                         log.info(f'Training epoch {epoch} ended')
 
                         with torch.no_grad():
-                            model.eval()
+                            communication_pipeline.eval()
+                            if blocks_after is not None:
+                                blocks_after.eval()
 
                             if (epoch + 1) % 5 == 0:
                                 pass
@@ -564,18 +573,35 @@ def main(cfg: DictConfig):
                                 #     v = {k: v / t for k, v in average_dropping.items()}
                                 #     log.info(f'Model budget {a} has average scoring: {v}')
                             else:
-                                t, c = 0, 0
+                                if channel is not None and (epoch + 1) % 5 == 0:
+                                    for snr in np.linspace(-10, 10, 20, dtype=int):
+                                        channel.snr = snr
+                                        t, c = 0, 0
 
-                                for x, y in test_dataloader:
-                                    x, y = x.to(device), y.to(device)
+                                        for x, y in test_dataloader:
+                                            x, y = x.to(device), y.to(device)
 
-                                    pred = model(x)
-                                    c += (pred.argmax(-1) == y).sum().item()
-                                    t += len(x)
+                                            pred = model(x)
+                                            c += (pred.argmax(-1) == y).sum().item()
+                                            t += len(x)
 
-                                score = c / t
+                                        score = c / t
 
-                        bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+                                        log.info(f'SNR {snr}: {score}')
+                                else:
+                                    t, c = 0, 0
+
+                                    for x, y in test_dataloader:
+                                        x, y = x.to(device), y.to(device)
+
+                                        pred = model(x)
+                                        c += (pred.argmax(-1) == y).sum().item()
+                                        t += len(x)
+
+                                    score = c / t
+
+                                    bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+
 
                     torch.save(model.state_dict(), comm_model_path)
 

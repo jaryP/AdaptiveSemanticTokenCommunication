@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from methods.flops_count import compute_flops
 from methods.proposal import AdaptiveBlock, SemanticVit
@@ -22,22 +23,24 @@ def semantic_evaluation(model: SemanticVit, dataset, budgets=None):
 
     full_flops = None
 
-    for a in budgets:
+    for a in tqdm(budgets, leave=False):
 
         c, t = 0, 0
         average_dropping = defaultdict(float)
         a_flops = []
 
-        for x, y in DataLoader(dataset, batch_size=1):
+        for x, y in DataLoader(dataset, batch_size=32):
             x, y = x.to(device), y.to(device)
 
             if full_flops is None:
                 full_flops = compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0]
 
-            model.current_alpha = a
             pred = model(x, alpha=a)
+
+            model.current_alpha = a
             a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0] / full_flops)
             model.current_alpha = None
+
 
             c += (pred.argmax(-1) == y).sum().item()
             t += len(x)
@@ -49,5 +52,4 @@ def semantic_evaluation(model: SemanticVit, dataset, budgets=None):
         flops[a] = np.mean(a_flops)
         all_sizes[a] = {k: v / t for k, v in average_dropping.items()}
 
-
-    return accuracy, flops, all_sizes
+    return {'accuracy': accuracy, 'flops':  flops, 'all_sizes':  all_sizes}

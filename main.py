@@ -239,7 +239,7 @@ def main(cfg: DictConfig):
                         model.eval()
 
                         if (epoch + 1) % 5 == 0:
-                            continue
+                            # continue
                             for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
 
                                 c, t = 0, 0
@@ -278,11 +278,84 @@ def main(cfg: DictConfig):
 
             # TODO: scrivere final evaluation
 
+        final_evaluation = cfg.get('final_evaluation', {})
+
+        for key, value in final_evaluation.items():
+            if not os.path.exists(os.path.join(evaluation_results, f'{key}.json')):
+
+                results = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+
+                if results is not None:
+                    with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
+                        json.dump(results, f)
+
+                    print(results)
+
+        # from io import BytesIO
+        # from PIL import Image
+        # from torchvision import transforms as T
+        # import torchvision
+        #
+        # model.eval()
+        # class ToJpeg(torch.nn.Module):
+        #
+        #     def __init__(self, quality):
+        #         super().__init__()
+        #         self.quality = quality
+        #
+        #     def forward(self, img):
+        #         buffer = BytesIO()
+        #         img.save(buffer, "JPEG", quality=self.quality)
+        #
+        #         byts.append(buffer.tell())
+        #         return Image.open(buffer)
+        #
+        # results = {}
+        #
+        # for quality in [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
+        #     byts = []
+        #
+        #     test_transform = T.Compose([
+        #         ToJpeg(quality),
+        #         T.Resize((248, 248), interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
+        #         T.CenterCrop((224, 224)),
+        #         # T.CenterCrop(224),
+        #         T.ToTensor(),
+        #         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+        #
+        #     testset = torchvision.datasets.Imagenette(root='./data/imagenette',
+        #                                               split='val',
+        #                                               download=False, transform=test_transform)
+        #
+        #     c, t = 0, 0
+        #
+        #     with torch.no_grad():
+        #         for x, y in DataLoader(testset, batch_size=32):
+        #             x, y = x.to(device), y.to(device)
+        #
+        #             pred = model(x)
+        #
+        #             c += (pred.argmax(-1) == y).sum().item()
+        #             t += len(x)
+        #
+        #         results[(quality, np.mean(byts))] = (c / t)
+        #
+        #     print(results)
+
         if 'jscc' in cfg:
 
+            # from comm.channel import GaussianNoiseChannel
+            #
+            # blocks_before = model.blocks[:6]
+            # blocks_after = model.blocks[6:]
+            #
+            # for i, b in enumerate(blocks_after):
+            #     if hasattr(b, 'base_block'):
+            #         model.blocks[i] = b.base_block
+            #
             # channel = GaussianNoiseChannel(snr=(-50, 50))
             #
-            # model.blocks = nn.Sequential(*model.blocks, channel)
+            # model.blocks = nn.Sequential(*blocks_before, channel, *blocks_after)
             #
             # model.eval()
             # channel_results = defaultdict(dict)
@@ -293,7 +366,7 @@ def main(cfg: DictConfig):
             #     average_masks = 0
             #
             #     for snr in np.arange(-50, 50, 5):
-            #         channel.snr = snr
+            #         channel.test_snr = snr
             #
             #         c, t = 0, 0
             #         band = 0
@@ -549,7 +622,7 @@ def main(cfg: DictConfig):
                             if blocks_after is not None:
                                 blocks_after.eval()
 
-                            if (epoch + 1) % 5 == 0:
+                            if (epoch + 1) % 5 == 0 and False:
                                 pass
                                 # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
                                 #
@@ -575,7 +648,8 @@ def main(cfg: DictConfig):
                             else:
                                 if channel is not None and (epoch + 1) % 5 == 0:
                                     for snr in np.linspace(-10, 10, 20, dtype=int):
-                                        channel.snr = snr
+                                        channel.test_snr = snr
+
                                         t, c = 0, 0
 
                                         for x, y in test_dataloader:
@@ -602,8 +676,26 @@ def main(cfg: DictConfig):
 
                                     bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
-
                     torch.save(model.state_dict(), comm_model_path)
+
+                if channel is not None:
+                    for key, value in final_evaluation.items():
+                        if not os.path.exists(os.path.join(evaluation_results, f'{experiment_key}_{key}.json')):
+
+                            eval_f = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+
+                            results = {}
+                            for snr in np.linspace(-50, 50, 25, dtype=int):
+                                channel.test_snr = snr
+
+                                _results = eval_f()
+                                results[snr] = _results
+
+                            if results is not None:
+                                with open(os.path.join(evaluation_results, f'{experiment_key}_{key}.json'), 'w') as f:
+                                    json.dump(results, f)
+
+                                print(results)
 
 
 if __name__ == "__main__":

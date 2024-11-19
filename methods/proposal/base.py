@@ -5,7 +5,7 @@ from timm.models.vision_transformer import Block, VisionTransformer
 
 
 class AdaptiveBlock(nn.Module):
-    def __init__(self, block: Block, num_patches, dim, *args, **kwargs):
+    def __init__(self, block: Block, num_patches, dim, eval_threshold=1e-3, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -19,6 +19,7 @@ class AdaptiveBlock(nn.Module):
         self.fh[-2].bias.data.normal_(-5, 0.1)
 
         self.last_mask = None
+        self.eval_threshold = eval_threshold
 
     @property
     def base_block(self):
@@ -53,6 +54,9 @@ class AdaptiveBlock(nn.Module):
         ones = torch.ones_like(mask[:, :1])
         mask = torch.cat((ones, mask, ones), 1)
 
+        if not self.training:
+            mask = torch.where(mask > self.eval_threshold, mask, torch.zeros_like(mask))
+
         if not self.training and len(x) == 1:
             bmask = mask > 0
             self.last_mask = bmask.float()
@@ -62,7 +66,7 @@ class AdaptiveBlock(nn.Module):
 
             x = x[bmask.expand_as(x)].view(1, -1, x.shape[-1])
             x = self._block(x)
-            return x, mask
+            return x, None
         else:
             if prev_mask is not None:
                 mask = mask * prev_mask
@@ -123,7 +127,9 @@ class SemanticVit(nn.Module):
                 alpha = torch.tensor([int(alpha * 100)], device=x.device)
                 budget_embedding = self.budget_embs(alpha)
             elif isinstance(alpha, tuple):
-                a, b = alpha
+                a, b = min(alpha), max(alpha)
+                delta = b - a
+                alpha = torch.linspace(a, b, len(x), device=x.device, dtype=torch.float)
                 alpha = torch.empty(len(x), 1, device=x.device, dtype=torch.float).uniform_(a, b)
                 alpha = (alpha * 100).long()
                 budget_embedding = self.budget_embs(alpha)
@@ -136,8 +142,11 @@ class SemanticVit(nn.Module):
             if isinstance(alpha, float):
                 budget_embedding = self.budget_token_lower * alpha + self.budget_token_upper * (1 - alpha)
             elif isinstance(alpha, tuple):
-                a, b = alpha
-                alpha = torch.empty(len(x), 1, 1, device=x.device, dtype=torch.float).uniform_(a, b)
+                a, b = min(alpha), max(alpha)
+                sigma = (b - a) / len(x)
+                mean = torch.linspace(a, b, len(x), device=x.device, dtype=torch.float)[..., None, None]
+                alpha = torch.normal(mean, sigma).clip(a, b)
+                # alpha = torch.empty(len(x), 1, 1, device=x.device, dtype=torch.float).uniform_(a, b)
                 budget_embedding = self.budget_token_lower * alpha + self.budget_token_upper * (1 - alpha)
             else:
                 assert False

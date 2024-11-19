@@ -202,24 +202,25 @@ class CommunicationPipeline(nn.Module):
     def __init__(self, encoder, channel, decoder, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.encoder = encoder
-        self.decoder = decoder
-        self.channel = channel
+        self.encoder = encoder if encoder is not None else lambda x: x
+        self.decoder = decoder if decoder is not None else lambda x: x
+        self.channel = channel if channel is not None else lambda x: x
 
     def forward(self, x, snr=None):
         if not self.training:
             mask = (x.sum(dim=-1, keepdim=True) != 0).float()
+
             x = self.encoder(x)
 
-            if self.channel is not None:
-                x = self.channel(x * mask)
+            # if self.channel is not None:
+            x = self.channel(x * mask)
 
             decoded = self.decoder(x) * mask
         else:
             x = self.encoder(x)
 
-            if self.channel is not None:
-                x = self.channel(x)
+            # if self.channel is not None:
+            x = self.channel(x)
 
             decoded = self.decoder(x)
 

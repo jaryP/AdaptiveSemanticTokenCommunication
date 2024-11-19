@@ -30,10 +30,10 @@ gaussian_noise:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -10, 10 ]
-    use_training_snr: No
+    use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
-    output_size: 0.25
+    output_size: 0.5
     n_layers: 3
     normalize: Yes
     drop_last_activation: Yes

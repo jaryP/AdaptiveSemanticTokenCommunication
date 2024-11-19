@@ -66,6 +66,7 @@ class OpenChannel(nn.Module):
 class GaussianNoiseChannel(CleanChannel):
     def __init__(self,
                  snr: Union[float, Tuple[float, float]],
+                 test_snr = None,
                  use_training_snr=True,
                  dims=-1,
                  *args, **kwargs):
@@ -76,16 +77,26 @@ class GaussianNoiseChannel(CleanChannel):
         self.use_training_snr = use_training_snr
 
         self._snr = 0
+        self._test_snr = snr
+        self._train_snr = test_snr if test_snr is not None else snr
 
         self.dims = dims
 
     def get_snr(self, size: int, device: Union[str, torch.device] = 'cpu'):
-        if isinstance(self._base_snr, Sequence):
-            r1, r2 = self._base_snr
-            snr = (r1 - r2) * torch.rand(size, device=device) + r2
-            # snr = snr[..., None]
+        if self.training:
+            snr = self._train_snr
         else:
-            snr = self._base_snr
+            snr = self._test_snr
+
+        if snr is None:
+            return snr
+
+        if isinstance(snr, Sequence):
+            r1, r2 = snr
+            snr = (r1 - r2) * torch.rand(size, device=device) + r2
+
+        # else:
+        #     snr = self._base_snr
 
         return snr
 
@@ -96,6 +107,10 @@ class GaussianNoiseChannel(CleanChannel):
         return std
 
     def apply_noise(self, x, signal_power, snr):
+        if isinstance(snr, torch.Tensor):
+            while len(snr.shape) < len(x.shape):
+                snr = snr[..., None]
+
         noise_power = (signal_power / (10 ** (snr / 10)))
         std = torch.sqrt(noise_power)
 
@@ -103,17 +118,12 @@ class GaussianNoiseChannel(CleanChannel):
 
         return x + noise
 
-    def forward(self, x: torch.Tensor, snr=None):
+    def forward(self, x: torch.Tensor, snr=None, **kwargs):
         if self.training and not self.use_training_snr:
             return x
 
-        if self.snr is None:
-            return x
-
-        signal_power = torch.linalg.norm(x, ord=2, dim=self.dims, keepdim=True)
-        size = math.prod([signal_power.size(dim=d) for d in self.dims]) if isinstance(self.dims, Sequence) \
-            else signal_power.size(dim=self.dims)
-        signal_power = signal_power / size
+        # if self.snr is None:
+        #     return x
 
         if snr is None:
             snr = self.get_snr(len(x), x.device)
@@ -121,8 +131,15 @@ class GaussianNoiseChannel(CleanChannel):
         elif isinstance(snr, torch.Tensor):
             snr = snr.to(x.device)
 
-        while len(snr.shape) < len(signal_power.shape):
-            snr = snr[:, None]
+        if snr is None:
+            return x
+
+        signal_power = torch.linalg.norm(x, ord=2, dim=self.dims, keepdim=True)
+        size = math.prod([x.size(dim=d) for d in self.dims]) if isinstance(self.dims, Sequence) else x.size(dim=self.dims)
+        signal_power = signal_power / size
+
+        # while len(snr.shape) < len(signal_power.shape):
+        #     snr = snr[:, None]
 
         # noise_power = (signal_power / (10 ** (snr / 10)))
         # std = self.calculate_sigma(signal_power, snr)
@@ -134,16 +151,16 @@ class GaussianNoiseChannel(CleanChannel):
         return self.apply_noise(x, signal_power, snr)
 
     @property
-    def snr(self):
+    def test_snr(self):
         return self._snr
 
-    @snr.setter
-    def snr(self, v: Union[float, str]):
+    @test_snr.setter
+    def test_snr(self, v: Union[float, str]):
         if isinstance(v, str):
             assert v == 'random'
-            self._snr = None
+            self._test_snr = None
         else:
-            self._snr = v
+            self._test_snr = v
 
 
 class FadingGaussianNoiseChannel(GaussianNoiseChannel):

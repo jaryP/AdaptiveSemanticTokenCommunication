@@ -106,6 +106,7 @@ class ABSComplexToRealNN(nn.Module):
 
         return x
 
+
 class ConcatComplexToRealNN(nn.Module):
     def __init__(self,
                  input_size,
@@ -137,3 +138,5 @@ class ConcatComplexToRealNN(nn.Module):
             x = x.permute(0, 2, 1)
 
         return x
+
+

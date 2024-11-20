@@ -3,7 +3,7 @@
 #SBATCH -p boost_usr_prod
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=4
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=2
 #SBATCH --ntasks=4

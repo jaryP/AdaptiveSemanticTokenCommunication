@@ -279,17 +279,22 @@ def main(cfg: DictConfig):
             # TODO: scrivere final evaluation
 
         final_evaluation = cfg.get('final_evaluation', {})
+        if final_evaluation is None:
+            final_evaluation = {}
 
         for key, value in final_evaluation.items():
-            if not os.path.exists(os.path.join(evaluation_results, f'{key}.json')):
+            overwrite = value.get('overwrite', False)
 
-                results = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+            if not os.path.exists(os.path.join(evaluation_results, f'{key}.json')) or overwrite:
+
+                with warnings.catch_warnings(action="ignore"):
+                    results = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
 
                 if results is not None:
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
-                        json.dump(results, f)
+                        json.dump(results, f, ensure_ascii=True, indent=4)
 
-                    print(results)
+                    # print(results)
 
         # from io import BytesIO
         # from PIL import Image
@@ -587,8 +592,6 @@ def main(cfg: DictConfig):
                                     desc='Comm model training')
                     epoch_losses = []
 
-                    score = -1
-
                     blocks_before.eval()
 
                     for epoch in bar:
@@ -678,24 +681,42 @@ def main(cfg: DictConfig):
 
                     torch.save(model.state_dict(), comm_model_path)
 
-                if channel is not None:
-                    for key, value in final_evaluation.items():
-                        if not os.path.exists(os.path.join(evaluation_results, f'{experiment_key}_{key}.json')):
+                final_evaluation = cfg.get('comm_evaluation', {})
+                if final_evaluation is None:
+                    final_evaluation = {}
 
-                            eval_f = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+                for key, value in final_evaluation.items():
+                    overwrite = value.get('overwrite', False)
 
-                            results = {}
-                            for snr in np.linspace(-50, 50, 25, dtype=int):
-                                channel.test_snr = snr
+                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite:
 
-                                _results = eval_f()
-                                results[snr] = _results
+                        with warnings.catch_warnings(action="ignore"):
+                            results = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
 
-                            if results is not None:
-                                with open(os.path.join(evaluation_results, f'{experiment_key}_{key}.json'), 'w') as f:
-                                    json.dump(results, f)
+                        if results is not None:
+                            with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:
+                                json.dump(results, f, ensure_ascii=True, indent=4)
 
-                                print(results)
+                            print(results)
+
+                # if channel is not None:
+                #     for key, value in final_evaluation.items():
+                #         if not os.path.exists(os.path.join(evaluation_results, f'{experiment_key}_{key}.json')):
+                #
+                #             eval_f = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+                #
+                #             results = {}
+                #             for snr in np.linspace(-50, 50, 25, dtype=int):
+                #                 channel.test_snr = snr
+                #
+                #                 _results = eval_f()
+                #                 results[snr] = _results
+                #
+                #             if results is not None:
+                #                 with open(os.path.join(evaluation_results, f'{experiment_key}_{key}.json'), 'w') as f:
+                #                     json.dump(results, f)
+                #
+                #                 print(results)
 
 
 if __name__ == "__main__":

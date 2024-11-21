@@ -5,6 +5,7 @@ values_to_skip:
   - final_evaluation
   - serialization
   - jscc
+  - comm_evaluation
 values_to_add:
   - training_pipeline.dataset.train._target_
   - method.model._target_

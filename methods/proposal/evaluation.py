@@ -10,7 +10,13 @@ from methods.proposal import AdaptiveBlock, SemanticVit
 
 
 @torch.no_grad()
-def semantic_evaluation(model: SemanticVit, dataset, budgets=None):
+def semantic_evaluation(model: SemanticVit,
+                        dataset,
+                        budgets=None,
+                        calculate_flops=True,
+                        # full_flops=None,
+                        **kwargs):
+
     device = next(model.parameters()).device
     model.eval()
 
@@ -29,18 +35,18 @@ def semantic_evaluation(model: SemanticVit, dataset, budgets=None):
         average_dropping = defaultdict(float)
         a_flops = []
 
-        for x, y in DataLoader(dataset, batch_size=32):
+        for x, y in DataLoader(dataset, batch_size=1):
             x, y = x.to(device), y.to(device)
 
-            if full_flops is None:
+            if full_flops is None and calculate_flops:
                 full_flops = compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0]
 
             pred = model(x, alpha=a)
 
-            model.current_alpha = a
-            a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0] / full_flops)
-            model.current_alpha = None
-
+            if full_flops is not None:
+                model.current_alpha = a
+                a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0] / full_flops)
+                model.current_alpha = None
 
             c += (pred.argmax(-1) == y).sum().item()
             t += len(x)
@@ -49,7 +55,12 @@ def semantic_evaluation(model: SemanticVit, dataset, budgets=None):
                 average_dropping[i] += b.last_mask.shape[1]
 
         accuracy[a] = c / t
-        flops[a] = np.mean(a_flops)
         all_sizes[a] = {k: v / t for k, v in average_dropping.items()}
 
-    return {'accuracy': accuracy, 'flops':  flops, 'all_sizes':  all_sizes}
+        if a in flops:
+            flops[a] = np.mean(a_flops)
+
+    if len(flops) > 0:
+        return {'accuracy': accuracy, 'flops':  flops, 'all_sizes':  all_sizes}
+    else:
+        return {'accuracy': accuracy, 'all_sizes':  all_sizes}

@@ -73,18 +73,6 @@ def digital_jpeg(model, dataset, kn, snr, base=10):
 
             return img
 
-    class ToJpeg(torch.nn.Module):
-        def __init__(self, quality):
-            super().__init__()
-            self.quality = quality
-
-        def forward(self, img):
-
-            buffer = BytesIO()
-            img.save(buffer, "JPEG", quality=self.quality)
-
-            return Image.open(buffer)
-
     model.eval()
     device = next(model.parameters()).device
 

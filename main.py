@@ -283,6 +283,8 @@ def main(cfg: DictConfig):
         if final_evaluation is None:
             final_evaluation = {}
 
+        log.info(f'Final evaluation')
+
         for key, value in final_evaluation.items():
             overwrite = value.get('overwrite', False)
 
@@ -294,6 +296,8 @@ def main(cfg: DictConfig):
                 if results is not None:
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
                         json.dump(results, f, ensure_ascii=True, indent=4)
+
+        log.info(f'Comm baselines evaluation')
 
         snr = range(-20, 20+1, 2)
         kn = np.arange(0.05, 1.01, 0.01)

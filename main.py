@@ -15,6 +15,7 @@ from torch import nn
 
 from torch.utils.data import DataLoader
 
+from comm.evaluation import digital_jpeg, digital_resize
 from methods.proposal import AdaptiveBlock
 from serialization import process_saving_path, get_hash, get_path
 from utils import get_pretrained_model, get_encoder_decoder, BaseRealToComplex, BaseComplexToReal, CommunicationPipeline
@@ -294,58 +295,17 @@ def main(cfg: DictConfig):
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
                         json.dump(results, f, ensure_ascii=True, indent=4)
 
-                    # print(results)
+        snr = range(-20, 20+1, 2)
+        kn = np.arange(0.05, 1.01, 0.01)
+        if not os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+            results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr)
+            with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+                json.dump(results, f, ensure_ascii=True, indent=4)
 
-        # from io import BytesIO
-        # from PIL import Image
-        # from torchvision import transforms as T
-        # import torchvision
-        #
-        # model.eval()
-        # class ToJpeg(torch.nn.Module):
-        #
-        #     def __init__(self, quality):
-        #         super().__init__()
-        #         self.quality = quality
-        #
-        #     def forward(self, img):
-        #         buffer = BytesIO()
-        #         img.save(buffer, "JPEG", quality=self.quality)
-        #
-        #         byts.append(buffer.tell())
-        #         return Image.open(buffer)
-        #
-        # results = {}
-        #
-        # for quality in [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-        #     byts = []
-        #
-        #     test_transform = T.Compose([
-        #         ToJpeg(quality),
-        #         T.Resize((248, 248), interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
-        #         T.CenterCrop((224, 224)),
-        #         # T.CenterCrop(224),
-        #         T.ToTensor(),
-        #         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-        #
-        #     testset = torchvision.datasets.Imagenette(root='./data/imagenette',
-        #                                               split='val',
-        #                                               download=False, transform=test_transform)
-        #
-        #     c, t = 0, 0
-        #
-        #     with torch.no_grad():
-        #         for x, y in DataLoader(testset, batch_size=32):
-        #             x, y = x.to(device), y.to(device)
-        #
-        #             pred = model(x)
-        #
-        #             c += (pred.argmax(-1) == y).sum().item()
-        #             t += len(x)
-        #
-        #         results[(quality, np.mean(byts))] = (c / t)
-        #
-        #     print(results)
+        if not os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
+            results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr)
+            with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+                json.dump(results, f, ensure_ascii=True, indent=4)
 
         if 'jscc' in cfg:
 
@@ -625,59 +585,59 @@ def main(cfg: DictConfig):
                             if blocks_after is not None:
                                 blocks_after.eval()
 
-                            if (epoch + 1) % 5 == 0 and False:
-                                pass
-                                # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-                                #
-                                #     c, t = 0, 0
-                                #     average_dropping = defaultdict(float)
-                                #
-                                #     for x, y in DataLoader(test_dataset, batch_size=1):
-                                #         x, y = x.to(device), y.to(device)
-                                #
-                                #         pred = model(x, alpha=a)
-                                #
-                                #         c += (pred.argmax(-1) == y).sum().item()
-                                #         t += len(x)
-                                #
-                                #         for i, b in enumerate(
-                                #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                                #                  b.last_mask is not None]):
-                                #             average_dropping[i] += b.last_mask.shape[1]
-                                #
-                                #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                                #     v = {k: v / t for k, v in average_dropping.items()}
-                                #     log.info(f'Model budget {a} has average scoring: {v}')
-                            else:
-                                if channel is not None and (epoch + 1) % 5 == 0:
-                                    for snr in np.linspace(-10, 10, 20, dtype=int):
-                                        channel.test_snr = snr
+                            # if (epoch + 1) % 5 == 0 and False:
+                            #     pass
+                            #     # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                            #     #
+                            #     #     c, t = 0, 0
+                            #     #     average_dropping = defaultdict(float)
+                            #     #
+                            #     #     for x, y in DataLoader(test_dataset, batch_size=1):
+                            #     #         x, y = x.to(device), y.to(device)
+                            #     #
+                            #     #         pred = model(x, alpha=a)
+                            #     #
+                            #     #         c += (pred.argmax(-1) == y).sum().item()
+                            #     #         t += len(x)
+                            #     #
+                            #     #         for i, b in enumerate(
+                            #     #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                            #     #                  b.last_mask is not None]):
+                            #     #             average_dropping[i] += b.last_mask.shape[1]
+                            #     #
+                            #     #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                            #     #     v = {k: v / t for k, v in average_dropping.items()}
+                            #     #     log.info(f'Model budget {a} has average scoring: {v}')
+                            # else:
+                            #     if channel is not None and (epoch + 1) % 5 == 0:
+                            #         for snr in np.linspace(-10, 10, 20, dtype=int):
+                            #             channel.test_snr = snr
+                            #
+                            #             t, c = 0, 0
+                            #
+                            #             for x, y in test_dataloader:
+                            #                 x, y = x.to(device), y.to(device)
+                            #
+                            #                 pred = model(x)
+                            #                 c += (pred.argmax(-1) == y).sum().item()
+                            #                 t += len(x)
+                            #
+                            #             score = c / t
+                            #
+                            #             log.info(f'SNR {snr}: {score}')
+                            #     else:
+                            t, c = 0, 0
 
-                                        t, c = 0, 0
+                            for x, y in test_dataloader:
+                                x, y = x.to(device), y.to(device)
 
-                                        for x, y in test_dataloader:
-                                            x, y = x.to(device), y.to(device)
+                                pred = model(x)
+                                c += (pred.argmax(-1) == y).sum().item()
+                                t += len(x)
 
-                                            pred = model(x)
-                                            c += (pred.argmax(-1) == y).sum().item()
-                                            t += len(x)
+                            score = c / t
 
-                                        score = c / t
-
-                                        log.info(f'SNR {snr}: {score}')
-                                else:
-                                    t, c = 0, 0
-
-                                    for x, y in test_dataloader:
-                                        x, y = x.to(device), y.to(device)
-
-                                        pred = model(x)
-                                        c += (pred.argmax(-1) == y).sum().item()
-                                        t += len(x)
-
-                                    score = c / t
-
-                                    bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+                            bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
                     torch.save(model.state_dict(), comm_model_path)
 

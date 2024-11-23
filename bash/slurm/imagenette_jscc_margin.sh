@@ -18,7 +18,7 @@ conda init
 #conda activate eep
 source activate eep
 
-for inner_w in 0 0.1 0.5 1
+for inner_w in 0.5 1
   do
   for out_w in 0.5 1 2
   do
@@ -26,7 +26,7 @@ for inner_w in 0 0.1 0.5 1
   done
 done
 
-for inner_w in 0 0.1 0.5 1
+for inner_w in 0.5 1
   do
   for out_w in 0.5 1 2
   do

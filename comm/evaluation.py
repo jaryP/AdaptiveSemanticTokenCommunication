@@ -1,9 +1,7 @@
-from collections import defaultdict
 from copy import deepcopy
 from io import BytesIO
 from typing import Sequence
 
-import PIL
 import numpy as np
 import torch
 from PIL import Image
@@ -116,8 +114,6 @@ def digital_jpeg(model, dataset, kn, snr, base=10):
 
             results[_snr][_kn] = cor / tot
 
-            print(_snr, _kn, cor / tot)
-
     dataset.transform = base_transforms
 
     return results
@@ -168,8 +164,6 @@ def digital_resize(model, dataset, kn, snr, base=10):
                 cor += correct.sum().item()
 
             results[_snr][_kn] = cor / tot
-
-            print(_snr, _kn, L, cor / tot)
 
     dataset.transform = base_transforms
 

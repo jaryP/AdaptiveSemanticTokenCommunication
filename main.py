@@ -67,7 +67,7 @@ def main(cfg: DictConfig):
 
     device = torch.device(device)
 
-    print(OmegaConf.to_yaml(cfg.training_pipeline.dataset.train, resolve=True))
+    log.info(OmegaConf.to_yaml(cfg.training_pipeline.dataset.train, resolve=True))
 
     to_download = not os.path.exists(cfg.training_pipeline.dataset.train.root)
 
@@ -661,7 +661,7 @@ def main(cfg: DictConfig):
                             with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:
                                 json.dump(results, f, ensure_ascii=True, indent=4)
 
-                            print(results)
+                            # print(results)
 
                 # if channel is not None:
                 #     for key, value in final_evaluation.items():

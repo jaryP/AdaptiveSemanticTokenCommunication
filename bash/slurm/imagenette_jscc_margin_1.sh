@@ -6,7 +6,8 @@
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --job-name=6g_adaptive
-#SBATCH --out=./sout/adaptive_jsccn_margin.out
+#SBATCH --out=./sout/adaptive_jsccn_margin_1.out
+#SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}
 

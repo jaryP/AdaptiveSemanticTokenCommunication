@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize
-from tqdm import tqdm
+import tqdm.auto as tqdm
 
 from comm.channel import GaussianNoiseChannel
 from methods.proposal import SemanticVit
@@ -31,7 +31,7 @@ def gaussian_snr_evaluation(model: SemanticVit,
         snr = [snr]
 
     results = {}
-    for _snr in tqdm(snr, leave=False):
+    for _snr in tqdm.tqdm(snr, leave=False):
         channel.test_snr = _snr
         _results = function(model=model, dataset=dataset, **kwargs)
         results[_snr] = _results
@@ -40,7 +40,7 @@ def gaussian_snr_evaluation(model: SemanticVit,
 
 
 @torch.no_grad()
-def digital_jpeg(model, dataset, kn, snr, base=10):
+def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
 
     class ToJpegAnalogical(torch.nn.Module):
 
@@ -82,7 +82,7 @@ def digital_jpeg(model, dataset, kn, snr, base=10):
 
     results = {}
 
-    for _snr in tqdm(snr, leave=False):
+    for _snr in tqdm.tqdm(snr, leave=False):
 
         results[_snr] = {}
 
@@ -98,7 +98,7 @@ def digital_jpeg(model, dataset, kn, snr, base=10):
             tot = 0
             cor = 0
 
-            for x, y in DataLoader(dataset, batch_size=32):
+            for x, y in DataLoader(dataset, batch_size=batch_size):
                 x, y = x.to(device), y.to(device)
 
                 pred = model(x).argmax(-1)
@@ -120,7 +120,7 @@ def digital_jpeg(model, dataset, kn, snr, base=10):
 
 
 @torch.no_grad()
-def digital_resize(model, dataset, kn, snr, base=10):
+def digital_resize(model, dataset, kn, snr, base=10, batch_size=32):
 
     model.eval()
     device = next(model.parameters()).device
@@ -137,7 +137,7 @@ def digital_resize(model, dataset, kn, snr, base=10):
     else:
         shape = x.shape[:-1]
 
-    for _snr in tqdm(snr, leave=False):
+    for _snr in tqdm.tqdm(snr, leave=False):
 
         results[_snr] = {}
 
@@ -153,7 +153,7 @@ def digital_resize(model, dataset, kn, snr, base=10):
             tot = 0
             cor = 0
 
-            for x, y in DataLoader(dataset, batch_size=32):
+            for x, y in DataLoader(dataset, batch_size=batch_size):
                 x, y = x.to(device), y.to(device)
 
                 pred = model(x).argmax(-1)

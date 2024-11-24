@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+import tqdm.auto as tqdm
 
 from methods.flops_count import compute_flops
 from methods.proposal import AdaptiveBlock, SemanticVit
@@ -29,7 +29,7 @@ def semantic_evaluation(model: SemanticVit,
 
     full_flops = None
 
-    for a in tqdm(budgets, leave=False):
+    for a in tqdm.tqdm(budgets, leave=False):
 
         c, t = 0, 0
         average_dropping = defaultdict(float)

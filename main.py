@@ -298,18 +298,20 @@ def main(cfg: DictConfig):
                         json.dump(results, f, ensure_ascii=True, indent=4)
 
         log.info(f'Comm baselines evaluation')
-
+        
         snr = range(-20, 20+1, 2)
         kn = np.arange(0.05, 1.01, 0.01)
         if not os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr)
+            results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
             with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
                 json.dump(results, f, ensure_ascii=True, indent=4)
+            log.info(f'digital_resize baselines evaluation ended')
 
         if not os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-            results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr)
+            results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
             with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
                 json.dump(results, f, ensure_ascii=True, indent=4)
+            log.info(f'digital_jpeg baselines evaluation ended')
 
         if 'jscc' in cfg:
 

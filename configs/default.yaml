@@ -48,6 +48,7 @@ defaults:
   - method: null
   - final_evaluation: null
   - serialization: default
+  - comm_evaluation: default
   - _self_
 
 #method_name: ${method_path:${method.model._target_}}

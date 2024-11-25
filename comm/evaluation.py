@@ -18,8 +18,11 @@ from methods.proposal import SemanticVit
 def gaussian_snr_evaluation(model: SemanticVit,
                             dataset,
                             snr,
-                            function,
+                            function: None,
                             **kwargs):
+
+    if function is None:
+        function = lambda *x: x
 
     model.eval()
 

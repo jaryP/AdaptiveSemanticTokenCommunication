@@ -1,0 +1,13 @@
+load: True
+save: True
+values_to_skip:
+  - training_pipeline.schema.experiments
+  - final_evaluation
+  - serialization
+  - jscc
+values_to_add:
+  - training_pipeline.dataset.train._target_
+#  - method.model._target_
+#  - method.loss.inner_flops_type
+values_to_append: [base_model]
+values_to_prepend: null

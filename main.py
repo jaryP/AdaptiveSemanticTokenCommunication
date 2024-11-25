@@ -55,8 +55,6 @@ def main(cfg: DictConfig):
 
     device = torch.device(device)
 
-    log.info(OmegaConf.to_yaml(cfg.training_pipeline.dataset.train, resolve=True))
-
     to_download = not os.path.exists(cfg.training_pipeline.dataset.train.root)
 
     train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download, _convert_="partial")
@@ -162,13 +160,18 @@ def main(cfg: DictConfig):
 
         model = model.to(device)
 
-        model = hydra.utils.instantiate(cfg.method.model, model=model)
+        if 'method' in cfg and 'model' in cfg.method:
+            model = hydra.utils.instantiate(cfg.method.model, model=model)
 
         if 'training_pipeline' in cfg:
-            if os.path.exists(model_path):
-                model_dict = torch.load(model_path, map_location=device)
-                model.load_state_dict(model_dict)
-                log.info(f'Model loaded')
+            use_ptmodel = cfg.training_pipeline.schema.get('use_pretrained_model', False)
+            if os.path.exists(model_path) or use_ptmodel:
+                if not use_ptmodel:
+                    model_dict = torch.load(model_path, map_location=device)
+                    model.load_state_dict(model_dict)
+                    log.info(f'Model loaded')
+                else:
+                    log.info(f'Using the pretrained model')
             else:
                 log.info(f'Training of the model')
 
@@ -271,21 +274,21 @@ def main(cfg: DictConfig):
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
                         json.dump(results, f, ensure_ascii=True, indent=4)
 
-        log.info(f'Comm baselines evaluation')
-
-        snr = np.arange(-20, 20+1, 2.5)
-        kn = np.arange(0.05, 1.01, 0.025)
-        if not os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
-            with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-                json.dump(results, f, ensure_ascii=True, indent=4)
-            log.info(f'digital_resize baselines evaluation ended')
-
-        if not os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-            results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
-            with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-                json.dump(results, f, ensure_ascii=True, indent=4)
-            log.info(f'digital_jpeg baselines evaluation ended')
+        # log.info(f'Comm baselines evaluation')
+        #
+        # snr = np.arange(-20, 20+1, 2.5)
+        # kn = np.arange(0.05, 1.01, 0.025)
+        # if not os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+        #     results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
+        #     with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #         json.dump(results, f, ensure_ascii=True, indent=4)
+        #     log.info(f'digital_resize baselines evaluation ended')
+        #
+        # if not os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
+        #     results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
+        #     with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+        #         json.dump(results, f, ensure_ascii=True, indent=4)
+        #     log.info(f'digital_jpeg baselines evaluation ended')
 
         if 'jscc' in cfg:
 

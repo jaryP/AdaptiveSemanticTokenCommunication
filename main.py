@@ -17,9 +17,8 @@ from torch.utils.data import DataLoader
 
 from comm.evaluation import digital_jpeg, digital_resize
 from methods.proposal import AdaptiveBlock
-from serialization import process_saving_path, get_hash, get_path
-from utils import get_pretrained_model, get_encoder_decoder, BaseRealToComplex, BaseComplexToReal, CommunicationPipeline
-from methods.flops_count import compute_flops
+from serialization import get_hash, get_path
+from utils import get_pretrained_model, CommunicationPipeline
 
 
 class NpEncoder(json.JSONEncoder):
@@ -33,17 +32,6 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 
-# def process_saving_path(sstring: str) -> str:
-#     ll = sorted([s.split('=') for s in sstring.split('__')], key=lambda a: a[0])
-#
-#     return '__'.join(s[1] for s in ll)
-
-# def prova(prova, *, _root_):
-#     return None
-
-# OmegaConf.register_new_resolver("to_hash", get_hash)
-# OmegaConf.register_new_resolver("method_path", lambda x: x.split('.')[-1] if x is not None else 'null')
-# OmegaConf.register_new_resolver("process_saving_path", process_saving_path)
 OmegaConf.register_new_resolver("to_hash", get_hash)
 OmegaConf.register_new_resolver("get_path", get_path)
 
@@ -77,16 +65,7 @@ def main(cfg: DictConfig):
     training_schema = cfg.training_pipeline.schema
     dev_split = training_schema.get('dev_split', None)
 
-    # TODO: IMPLEMENTARE CONTROLLO SUL FILE DI CONFIG
-    #
-    # d = OmegaConf.to_container(cfg)
-    # del d['device']
-    # del d['core']
-    # del d['training_pipeline']['schema']['experiments']
-    #
-    # path_hash = get_hash(d)
     outer_experiment_path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
-    # outer_experiment_path = os.path.join(outer_experiment_path, path_hash)
 
     log.info(f'Saving path: {outer_experiment_path}')
 
@@ -178,8 +157,6 @@ def main(cfg: DictConfig):
                     c += (pred.argmax(-1) == y).sum().item()
                     t += len(x)
 
-            # input(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0])
-
             log.info(f'Pre trained model score: {c}, {t}, ({c / t})')
             model = model.cpu()
 
@@ -211,8 +188,6 @@ def main(cfg: DictConfig):
                                 desc='Model training')
                 epoch_losses = []
 
-                score = -1
-
                 for epoch in bar:
                     model.train()
                     for x, y in train_dataloader:
@@ -239,45 +214,44 @@ def main(cfg: DictConfig):
                     with torch.no_grad():
                         model.eval()
 
-                        if (epoch + 1) % 5 == 0:
-                            # continue
-                            for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                        # if (epoch + 1) % 5 == 0:
+                        #     # continue
+                        #     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                        #
+                        #         c, t = 0, 0
+                        #         average_dropping = defaultdict(float)
+                        #
+                        #         for x, y in DataLoader(test_dataset, batch_size=1):
+                        #             x, y = x.to(device), y.to(device)
+                        #
+                        #             pred = model(x, alpha=a)
+                        #
+                        #             c += (pred.argmax(-1) == y).sum().item()
+                        #             t += len(x)
+                        #
+                        #             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                        #                                    b.last_mask is not None]):
+                        #                 average_dropping[i] += b.last_mask.shape[1]
+                        #
+                        #         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                        #         v = {k: v / t for k, v in average_dropping.items()}
+                        #         log.info(f'Model budget {a} has average scoring: {v}')
+                        # else:
 
-                                c, t = 0, 0
-                                average_dropping = defaultdict(float)
+                        t, c = 0, 0
 
-                                for x, y in DataLoader(test_dataset, batch_size=1):
-                                    x, y = x.to(device), y.to(device)
+                        for x, y in test_dataloader:
+                            x, y = x.to(device), y.to(device)
 
-                                    pred = model(x, alpha=a)
+                            pred = model(x)
+                            c += (pred.argmax(-1) == y).sum().item()
+                            t += len(x)
 
-                                    c += (pred.argmax(-1) == y).sum().item()
-                                    t += len(x)
-
-                                    for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                                                           b.last_mask is not None]):
-                                        average_dropping[i] += b.last_mask.shape[1]
-
-                                log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                                v = {k: v / t for k, v in average_dropping.items()}
-                                log.info(f'Model budget {a} has average scoring: {v}')
-                        else:
-                            t, c = 0, 0
-
-                            for x, y in test_dataloader:
-                                x, y = x.to(device), y.to(device)
-
-                                pred = model(x)
-                                c += (pred.argmax(-1) == y).sum().item()
-                                t += len(x)
-
-                            score = c / t
+                        score = c / t
 
                     bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
                 torch.save(model.state_dict(), model_path)
-
-            # TODO: scrivere final evaluation
 
         final_evaluation = cfg.get('final_evaluation', {})
         if final_evaluation is None:
@@ -517,36 +491,8 @@ def main(cfg: DictConfig):
                             if p.requires_grad:
                                 p.requires_grad_(False)
 
-                    #     optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                    #                                         params=communication_pipeline.parameters())
-                    # else:
                     optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
                                                         params=model.parameters())
-
-                    # blocks_before = model.blocks[:splitting_point]
-                    # blocks_after = model.blocks[splitting_point:]
-
-                    # channel = experiment_cfg.get('channel', None)
-                    #
-                    # if channel is not None:
-                    #     channel = hydra.utils.instantiate(channel)
-                    #
-                    # real_part, complex_part, decoder = get_encoder_decoder(input_size=model.num_features,
-                    #                                                        n_layers=3,
-                    #                                                        compression=0.25)
-                    #
-                    # encoder = BaseRealToComplex(real_part, complex_part)
-                    # decoder = BaseComplexToReal(decoder)
-                    #
-                    # communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
-                    #
-                    # if blocks_after is not None:
-                    #     model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
-                    # else:
-                    #     model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
-
-                    # optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                    #                                     params=model.parameters())
 
                     scheduler = None
                     if 'scheduler' in cfg:
@@ -584,7 +530,7 @@ def main(cfg: DictConfig):
                         if scheduler is not None:
                             scheduler.step()
 
-                        log.info(f'Training epoch {epoch} ended')
+                        # log.info(f'Training epoch {epoch} ended')
 
                         with torch.no_grad():
                             communication_pipeline.eval()
@@ -663,27 +609,7 @@ def main(cfg: DictConfig):
                             with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:
                                 json.dump(results, f, ensure_ascii=True, indent=4)
 
-                            # print(results)
-
-                # if channel is not None:
-                #     for key, value in final_evaluation.items():
-                #         if not os.path.exists(os.path.join(evaluation_results, f'{experiment_key}_{key}.json')):
-                #
-                #             eval_f = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
-                #
-                #             results = {}
-                #             for snr in np.linspace(-50, 50, 25, dtype=int):
-                #                 channel.test_snr = snr
-                #
-                #                 _results = eval_f()
-                #                 results[snr] = _results
-                #
-                #             if results is not None:
-                #                 with open(os.path.join(evaluation_results, f'{experiment_key}_{key}.json'), 'w') as f:
-                #                     json.dump(results, f)
-                #
-                #                 print(results)
-
+                        log.info(f'{key} evaluation ended')
 
 if __name__ == "__main__":
     main()

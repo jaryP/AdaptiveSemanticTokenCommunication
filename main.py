@@ -348,6 +348,8 @@ def main(cfg: DictConfig):
 
                 comm_model = deepcopy(model)
 
+                log.debug(comm_model.named_parameters().keys())
+
                 if splitting_point > 0:
                     # splitting_point = splitting_point + 1
 
@@ -379,6 +381,8 @@ def main(cfg: DictConfig):
                     if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
                         model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
                                                 map_location=device)
+                        log.debug(model_dict.keys())
+
                         comm_model.load_state_dict(model_dict)
                         log.info(f'Fine tuned model loaded')
                     else:
@@ -616,6 +620,7 @@ def main(cfg: DictConfig):
                                 json.dump(results, f, ensure_ascii=True, indent=4)
 
                         log.info(f'{key} evaluation ended')
+
 
 if __name__ == "__main__":
     main()

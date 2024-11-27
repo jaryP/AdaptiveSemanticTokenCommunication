@@ -377,96 +377,96 @@ def main(cfg: DictConfig):
 
                 fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
 
-                if fine_tuning_cfg is not None:
-                    if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
-                        model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
-                                                map_location=device)
-                        log.info(model_dict.keys())
-
-                        comm_model.load_state_dict(model_dict)
-                        log.info(f'Fine tuned model loaded')
-                    else:
-                        gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
-
-                        loss_f = hydra.utils.instantiate(cfg.method.loss, model=comm_model)
-
-                        optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                            params=comm_model.parameters())
-
-                        scheduler = None
-                        if 'scheduler' in cfg:
-                            scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
-                                                                optimizer=optimizer)
-
-                        bar = tqdm.tqdm(range(experiment_cfg.epochs),
-                                        leave=False, desc='Fine tuning the model')
-                        epoch_losses = []
-
-                        score = -1
-
-                        for epoch in bar:
-                            comm_model.train()
-                            for x, y in train_dataloader:
-                                x, y = x.to(device), y.to(device)
-
-                                pred = comm_model(x)
-                                loss = loss_f(pred, y)
-
-                                epoch_losses.append(loss.item())
-
-                                optimizer.zero_grad()
-                                loss.backward()
-
-                                if gradient_clipping_value is not None:
-                                    torch.nn.utils.clip_grad_norm_(comm_model.parameters(), gradient_clipping_value)
-
-                                optimizer.step()
-
-                            if scheduler is not None:
-                                scheduler.step()
-
-                            log.info(f'Training epoch {epoch} ended')
-
-                            with torch.no_grad():
-                                comm_model.eval()
-
-                                if (epoch + 1) % 5 == 0:
-                                    for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-
-                                        c, t = 0, 0
-                                        average_dropping = defaultdict(float)
-
-                                        for x, y in DataLoader(test_dataset, batch_size=1):
-                                            x, y = x.to(device), y.to(device)
-
-                                            pred = comm_model(x, alpha=a)
-
-                                            c += (pred.argmax(-1) == y).sum().item()
-                                            t += len(x)
-
-                                            for i, b in enumerate(
-                                                    [b for b in comm_model.blocks if isinstance(b, AdaptiveBlock) if
-                                                     b.last_mask is not None]):
-                                                average_dropping[i] += b.last_mask.shape[1]
-
-                                        log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                                        v = {k: v / t for k, v in average_dropping.items()}
-                                        log.info(f'Model budget {a} has average scoring: {v}')
-                                else:
-                                    t, c = 0, 0
-
-                                    for x, y in test_dataloader:
-                                        x, y = x.to(device), y.to(device)
-
-                                        pred = comm_model(x)
-                                        c += (pred.argmax(-1) == y).sum().item()
-                                        t += len(x)
-
-                                    score = c / t
-
-                            bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
-
-                        torch.save(comm_model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
+                # if fine_tuning_cfg is not None:
+                #     if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
+                #         model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
+                #                                 map_location=device)
+                #         log.info(model_dict.keys())
+                #
+                #         comm_model.load_state_dict(model_dict)
+                #         log.info(f'Fine tuned model loaded')
+                #     else:
+                #         gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
+                #
+                #         loss_f = hydra.utils.instantiate(cfg.method.loss, model=comm_model)
+                #
+                #         optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                #                                             params=comm_model.parameters())
+                #
+                #         scheduler = None
+                #         if 'scheduler' in cfg:
+                #             scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
+                #                                                 optimizer=optimizer)
+                #
+                #         bar = tqdm.tqdm(range(experiment_cfg.epochs),
+                #                         leave=False, desc='Fine tuning the model')
+                #         epoch_losses = []
+                #
+                #         score = -1
+                #
+                #         for epoch in bar:
+                #             comm_model.train()
+                #             for x, y in train_dataloader:
+                #                 x, y = x.to(device), y.to(device)
+                #
+                #                 pred = comm_model(x)
+                #                 loss = loss_f(pred, y)
+                #
+                #                 epoch_losses.append(loss.item())
+                #
+                #                 optimizer.zero_grad()
+                #                 loss.backward()
+                #
+                #                 if gradient_clipping_value is not None:
+                #                     torch.nn.utils.clip_grad_norm_(comm_model.parameters(), gradient_clipping_value)
+                #
+                #                 optimizer.step()
+                #
+                #             if scheduler is not None:
+                #                 scheduler.step()
+                #
+                #             log.info(f'Training epoch {epoch} ended')
+                #
+                #             with torch.no_grad():
+                #                 comm_model.eval()
+                #
+                #                 if (epoch + 1) % 5 == 0:
+                #                     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                #
+                #                         c, t = 0, 0
+                #                         average_dropping = defaultdict(float)
+                #
+                #                         for x, y in DataLoader(test_dataset, batch_size=1):
+                #                             x, y = x.to(device), y.to(device)
+                #
+                #                             pred = comm_model(x, alpha=a)
+                #
+                #                             c += (pred.argmax(-1) == y).sum().item()
+                #                             t += len(x)
+                #
+                #                             for i, b in enumerate(
+                #                                     [b for b in comm_model.blocks if isinstance(b, AdaptiveBlock) if
+                #                                      b.last_mask is not None]):
+                #                                 average_dropping[i] += b.last_mask.shape[1]
+                #
+                #                         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                #                         v = {k: v / t for k, v in average_dropping.items()}
+                #                         log.info(f'Model budget {a} has average scoring: {v}')
+                #                 else:
+                #                     t, c = 0, 0
+                #
+                #                     for x, y in test_dataloader:
+                #                         x, y = x.to(device), y.to(device)
+                #
+                #                         pred = comm_model(x)
+                #                         c += (pred.argmax(-1) == y).sum().item()
+                #                         t += len(x)
+                #
+                #                     score = c / t
+                #
+                #             bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+                #
+                #         torch.save(comm_model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
 
                 comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
                 # os.makedirs(comm_model_path, exist_ok=True)
@@ -490,6 +490,7 @@ def main(cfg: DictConfig):
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
+                    log.info(model_dict.keys())
                     log.info(f'Comm model loaded')
                 else:
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)

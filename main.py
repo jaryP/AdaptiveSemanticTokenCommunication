@@ -348,7 +348,7 @@ def main(cfg: DictConfig):
 
                 comm_model = deepcopy(model)
 
-                log.debug(comm_model.named_parameters().keys())
+                log.debug(dict(comm_model.named_parameters()).keys())
 
                 if splitting_point > 0:
                     # splitting_point = splitting_point + 1

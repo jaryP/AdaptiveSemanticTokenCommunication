@@ -20,4 +20,4 @@ conda init
 #conda activate eep
 source activate eep
 
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 +training_pipeline.schema.use_pretrained_model=Yes +jscc=proposal +comm_evaluation=default serialization.values_to_prepend=[jscc] serialization=base_model device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 +training_pipeline.schema.use_pretrained_model=Yes +jscc=proposal comm_evaluation=default serialization.values_to_prepend=[jscc] serialization=base_model device=0

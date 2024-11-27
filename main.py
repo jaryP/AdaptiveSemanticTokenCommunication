@@ -4,6 +4,7 @@ import os
 import random
 import warnings
 from collections import defaultdict
+from copy import deepcopy
 
 import hydra
 
@@ -345,30 +346,32 @@ def main(cfg: DictConfig):
 
                 splitting_point = experiment_cfg.splitting_point
 
+                comm_model = deepcopy(model)
+
                 if splitting_point > 0:
                     # splitting_point = splitting_point + 1
 
                     if experiment_cfg.get('unwrap_after', False):
-                        for i, b in enumerate(model.blocks[splitting_point:]):
+                        for i, b in enumerate(comm_model.blocks[splitting_point:]):
                             if hasattr(b, 'base_block'):
-                               model.blocks[i] = b.base_block
+                               comm_model.blocks[i] = b.base_block
 
                     if experiment_cfg.get('unwrap_before', False):
-                        for i, b in enumerate(model.blocks[:splitting_point]):
+                        for i, b in enumerate(comm_model.blocks[:splitting_point]):
                             if hasattr(b, 'base_block'):
-                                model.blocks[i] = b.base_block
+                                comm_model.blocks[i] = b.base_block
 
-                    blocks_before = model.blocks[:splitting_point]
-                    blocks_after = model.blocks[splitting_point:]
+                    blocks_before = comm_model.blocks[:splitting_point]
+                    blocks_after = comm_model.blocks[splitting_point:]
 
                 else:
-                    blocks_before = model.blocks
+                    blocks_before = comm_model.blocks
                     blocks_after = None
 
                     if experiment_cfg.get('unwrap_after', False):
-                        for i, b in enumerate(model.blocks):
+                        for i, b in enumerate(comm_model.blocks):
                             if hasattr(b, 'base_block'):
-                               model.blocks[i] = b.base_block
+                               comm_model.blocks[i] = b.base_block
 
                 fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
 
@@ -376,15 +379,15 @@ def main(cfg: DictConfig):
                     if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
                         model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
                                                 map_location=device)
-                        model.load_state_dict(model_dict)
+                        comm_model.load_state_dict(model_dict)
                         log.info(f'Fine tuned model loaded')
                     else:
                         gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
 
-                        loss_f = hydra.utils.instantiate(cfg.method.loss, model=model)
+                        loss_f = hydra.utils.instantiate(cfg.method.loss, model=comm_model)
 
                         optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                            params=model.parameters())
+                                                            params=comm_model.parameters())
 
                         scheduler = None
                         if 'scheduler' in cfg:
@@ -398,11 +401,11 @@ def main(cfg: DictConfig):
                         score = -1
 
                         for epoch in bar:
-                            model.train()
+                            comm_model.train()
                             for x, y in train_dataloader:
                                 x, y = x.to(device), y.to(device)
 
-                                pred = model(x)
+                                pred = comm_model(x)
                                 loss = loss_f(pred, y)
 
                                 epoch_losses.append(loss.item())
@@ -411,7 +414,7 @@ def main(cfg: DictConfig):
                                 loss.backward()
 
                                 if gradient_clipping_value is not None:
-                                    torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
+                                    torch.nn.utils.clip_grad_norm_(comm_model.parameters(), gradient_clipping_value)
 
                                 optimizer.step()
 
@@ -421,7 +424,7 @@ def main(cfg: DictConfig):
                             log.info(f'Training epoch {epoch} ended')
 
                             with torch.no_grad():
-                                model.eval()
+                                comm_model.eval()
 
                                 if (epoch + 1) % 5 == 0:
                                     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
@@ -432,13 +435,13 @@ def main(cfg: DictConfig):
                                         for x, y in DataLoader(test_dataset, batch_size=1):
                                             x, y = x.to(device), y.to(device)
 
-                                            pred = model(x, alpha=a)
+                                            pred = comm_model(x, alpha=a)
 
                                             c += (pred.argmax(-1) == y).sum().item()
                                             t += len(x)
 
                                             for i, b in enumerate(
-                                                    [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                                                    [b for b in comm_model.blocks if isinstance(b, AdaptiveBlock) if
                                                      b.last_mask is not None]):
                                                 average_dropping[i] += b.last_mask.shape[1]
 
@@ -451,7 +454,7 @@ def main(cfg: DictConfig):
                                     for x, y in test_dataloader:
                                         x, y = x.to(device), y.to(device)
 
-                                        pred = model(x)
+                                        pred = comm_model(x)
                                         c += (pred.argmax(-1) == y).sum().item()
                                         t += len(x)
 
@@ -459,14 +462,14 @@ def main(cfg: DictConfig):
 
                             bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
-                        torch.save(model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
+                        torch.save(comm_model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
 
                 comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
                 # os.makedirs(comm_model_path, exist_ok=True)
 
-                encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=model.num_features)
+                encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=comm_model.num_features)
                 decoder = hydra.utils.instantiate(experiment_cfg.decoder, input_size=encoder.output_size,
-                                                  output_size=model.num_features)
+                                                  output_size=comm_model.num_features)
 
                 channel = experiment_cfg.get('channel', None)
 
@@ -476,13 +479,13 @@ def main(cfg: DictConfig):
                 communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
 
                 if blocks_after is not None:
-                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                    comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
                 else:
-                    model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
+                    comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
-                    model.load_state_dict(model_dict)
+                    comm_model.load_state_dict(model_dict)
                     log.info(f'Comm model loaded')
                 else:
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
@@ -495,7 +498,7 @@ def main(cfg: DictConfig):
                                 p.requires_grad_(False)
 
                     optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                        params=model.parameters())
+                                                        params=comm_model.parameters())
 
                     scheduler = None
                     if 'scheduler' in cfg:
@@ -517,7 +520,7 @@ def main(cfg: DictConfig):
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)
 
-                            pred = model(x)
+                            pred = comm_model(x)
                             loss = loss_f(pred, y)
 
                             epoch_losses.append(loss.item())
@@ -526,7 +529,7 @@ def main(cfg: DictConfig):
                             loss.backward()
 
                             if gradient_clipping_value is not None:
-                                torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping_value)
+                                torch.nn.utils.clip_grad_norm_(comm_model.parameters(), gradient_clipping_value)
 
                             optimizer.step()
 
@@ -586,7 +589,7 @@ def main(cfg: DictConfig):
                             for x, y in test_dataloader:
                                 x, y = x.to(device), y.to(device)
 
-                                pred = model(x)
+                                pred = comm_model(x)
                                 c += (pred.argmax(-1) == y).sum().item()
                                 t += len(x)
 
@@ -594,7 +597,7 @@ def main(cfg: DictConfig):
 
                             bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
-                    torch.save(model.state_dict(), comm_model_path)
+                    torch.save(comm_model.state_dict(), comm_model_path)
 
                 final_evaluation = cfg.get('comm_evaluation', {})
                 if final_evaluation is None:
@@ -606,7 +609,7 @@ def main(cfg: DictConfig):
                     if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite:
 
                         with warnings.catch_warnings(action="ignore"):
-                            results = hydra.utils.instantiate(value, dataset=test_dataset, model=model)
+                            results = hydra.utils.instantiate(value, dataset=test_dataset, model=comm_model)
 
                         if results is not None:
                             with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:

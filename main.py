@@ -341,14 +341,16 @@ def main(cfg: DictConfig):
             # exit()
 
             for experiment_key, experiment_cfg in cfg['jscc'].items():
+                log.info(f'Comm experiment called {experiment_key}')
+
                 comm_experiment_path = os.path.join(experiment_path, experiment_key)
                 os.makedirs(comm_experiment_path, exist_ok=True)
 
                 splitting_point = experiment_cfg.splitting_point
 
                 comm_model = deepcopy(model)
-
-                log.info(dict(comm_model.named_parameters()).keys())
+                
+                # log.info(dict(comm_model.named_parameters()).keys())
 
                 if splitting_point > 0:
                     # splitting_point = splitting_point + 1
@@ -490,7 +492,7 @@ def main(cfg: DictConfig):
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
-                    log.info(model_dict.keys())
+                    # log.info(model_dict.keys())
                     log.info(f'Comm model loaded')
                 else:
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)

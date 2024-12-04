@@ -1,22 +1,3 @@
-gaussian_no_training:
-  splitting_point: 6
-  unwrap_after: Yes
-  unwrap_before: No
-  epochs: 100
-  freeze_model: Yes
-  channel:
-    _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
-    use_training_snr: No
-  encoder:
-    _target_: comm.pipeline.BaseRealToComplexNN
-    output_size: 0.5
-    n_layers: 3
-    normalize: Yes
-    drop_last_activation: Yes
-  decoder:
-    _target_: comm.pipeline.ConcatComplexToRealNN
-    n_layers: 3
 gaussian_noise:
   splitting_point: 6
   unwrap_after: Yes
@@ -27,6 +8,25 @@ gaussian_noise:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -10, 10 ]
     use_training_snr: Yes
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.5
+    n_layers: 3
+    normalize: Yes
+    drop_last_activation: Yes
+  decoder:
+    _target_: comm.pipeline.ConcatComplexToRealNN
+    n_layers: 3
+gaussian_no_training:
+  splitting_point: 6
+  unwrap_after: Yes
+  unwrap_before: No
+  epochs: 100
+  freeze_model: Yes
+  channel:
+    _target_: comm.channel.GaussianNoiseChannel
+    snr: [ -10, 10 ]
+    use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
     output_size: 0.5

@@ -36,6 +36,7 @@ class NpEncoder(json.JSONEncoder):
 OmegaConf.register_new_resolver("to_hash", get_hash)
 OmegaConf.register_new_resolver("get_path", get_path)
 
+
 @hydra.main(config_path="configs",
             version_base='1.2',
             config_name="default")
@@ -58,7 +59,8 @@ def main(cfg: DictConfig):
 
     to_download = not os.path.exists(cfg.training_pipeline.dataset.train.root)
 
-    train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download, _convert_="partial")
+    train_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.train, download=to_download,
+                                            _convert_="partial")
     test_dataset = hydra.utils.instantiate(cfg.training_pipeline.dataset.test, _convert_="partial")
 
     training_schema = cfg.training_pipeline.schema
@@ -138,7 +140,7 @@ def main(cfg: DictConfig):
             os.makedirs(pre_trained_path, exist_ok=True)
 
             premodel_path = os.path.join(pre_trained_path, f'model_{seed}.pt')
-            
+
             if os.path.exists(premodel_path):
                 model.load_state_dict(torch.load(premodel_path))
                 model = model.to(device)
@@ -218,30 +220,6 @@ def main(cfg: DictConfig):
                     with torch.no_grad():
                         model.eval()
 
-                        # if (epoch + 1) % 5 == 0:
-                        #     # continue
-                        #     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-                        #
-                        #         c, t = 0, 0
-                        #         average_dropping = defaultdict(float)
-                        #
-                        #         for x, y in DataLoader(test_dataset, batch_size=1):
-                        #             x, y = x.to(device), y.to(device)
-                        #
-                        #             pred = model(x, alpha=a)
-                        #
-                        #             c += (pred.argmax(-1) == y).sum().item()
-                        #             t += len(x)
-                        #
-                        #             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                        #                                    b.last_mask is not None]):
-                        #                 average_dropping[i] += b.last_mask.shape[1]
-                        #
-                        #         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                        #         v = {k: v / t for k, v in average_dropping.items()}
-                        #         log.info(f'Model budget {a} has average scoring: {v}')
-                        # else:
-
                         t, c = 0, 0
 
                         for x, y in test_dataloader:
@@ -275,21 +253,43 @@ def main(cfg: DictConfig):
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
                         json.dump(results, f, ensure_ascii=True, indent=4)
 
-        # log.info(f'Comm baselines evaluation')
-        #
-        # snr = np.arange(-20, 20+1, 2.5)
-        # kn = np.arange(0.05, 1.01, 0.025)
-        # if not os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-        #     results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
-        #     with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-        #         json.dump(results, f, ensure_ascii=True, indent=4)
-        #     log.info(f'digital_resize baselines evaluation ended')
-        #
-        # if not os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-        #     results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256)
-        #     with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-        #         json.dump(results, f, ensure_ascii=True, indent=4)
-        #     log.info(f'digital_jpeg baselines evaluation ended')
+        log.info(f'Comm baselines evaluation')
+
+        snr = np.arange(-20, 20 + 1, 2.5)
+        kn = np.linspace(0.01, 1., num=20, endpoint=True)
+
+        ############################
+        ####### DIGITAL RESIZE #####
+        ############################
+        digital_resize_results = None
+        if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+            with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+                digital_resize_results = json.load(f)
+
+        digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+                                                previous_results=digital_resize_results)
+
+        with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+            json.dump(digital_resize_results, f, ensure_ascii=True, indent=4)
+
+        log.info(f'digital_resize baselines evaluation ended')
+
+        ############################
+        ####### DIGITAL   JPEG #####
+        ############################
+
+        jpeg_results = None
+        if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
+            with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+                jpeg_results = json.load(f)
+
+        jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+                                    previous_results=jpeg_results)
+
+        with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+            json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
+
+        log.info(f'digital_jpeg baselines evaluation ended')
 
         if 'jscc' in cfg:
 
@@ -349,7 +349,7 @@ def main(cfg: DictConfig):
                 splitting_point = experiment_cfg.splitting_point
 
                 comm_model = deepcopy(model)
-                
+
                 # log.info(dict(comm_model.named_parameters()).keys())
 
                 if splitting_point > 0:
@@ -358,7 +358,7 @@ def main(cfg: DictConfig):
                     if experiment_cfg.get('unwrap_after', False):
                         for i, b in enumerate(comm_model.blocks[splitting_point:]):
                             if hasattr(b, 'base_block'):
-                               comm_model.blocks[i] = b.base_block
+                                comm_model.blocks[i] = b.base_block
 
                     if experiment_cfg.get('unwrap_before', False):
                         for i, b in enumerate(comm_model.blocks[:splitting_point]):
@@ -375,7 +375,7 @@ def main(cfg: DictConfig):
                     if experiment_cfg.get('unwrap_after', False):
                         for i, b in enumerate(comm_model.blocks):
                             if hasattr(b, 'base_block'):
-                               comm_model.blocks[i] = b.base_block
+                                comm_model.blocks[i] = b.base_block
 
                 fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
 
@@ -482,7 +482,8 @@ def main(cfg: DictConfig):
                 if channel is not None:
                     channel = hydra.utils.instantiate(channel)
 
-                communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(device)
+                communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(
+                    device)
 
                 if blocks_after is not None:
                     comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)

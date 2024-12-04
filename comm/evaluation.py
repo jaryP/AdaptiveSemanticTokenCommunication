@@ -20,7 +20,6 @@ def gaussian_snr_evaluation(model: SemanticVit,
                             snr,
                             function: None,
                             **kwargs):
-
     if function is None:
         function = lambda *x: x
 
@@ -44,8 +43,8 @@ def gaussian_snr_evaluation(model: SemanticVit,
 
 
 @torch.no_grad()
-def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
-
+def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32,
+                 previous_results=None):
     class ToJpegAnalogical(torch.nn.Module):
 
         def __init__(self, max_bits):
@@ -59,7 +58,7 @@ def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
             buffer = BytesIO()
             img.save(buffer, "JPEG", quality=1)
 
-            bytes = (buffer.tell() * 8) / (w*h*3)
+            bytes = (buffer.tell() * 8) / (w * h * 3)
 
             if bytes > self.max_bits:
                 self.byts.append(-bytes)
@@ -68,7 +67,7 @@ def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
                 for v in range(95, 0, -1):
                     buffer = BytesIO()
                     img.save(buffer, "JPEG", quality=v)
-                    bytes = (buffer.tell() * 8) / (w*h*3)
+                    bytes = (buffer.tell() * 8) / (w * h * 3)
                     if bytes < self.max_bits:
                         self.byts.append(bytes)
                         return Image.open(buffer)
@@ -85,13 +84,19 @@ def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
             rr = t
 
     results = {}
+    if previous_results is not None and isinstance(previous_results, dict):
+        results = previous_results
 
     for _snr in tqdm.tqdm(snr, leave=False):
 
-        results[_snr] = {}
+        if _snr not in results:
+            results[_snr] = {}
 
         for _kn in kn:
-            rmax = _kn * np.log2(1 + (base ** (_snr / base) ))
+            if _kn in results[_snr]:
+                continue
+
+            rmax = _kn * np.log2(1 + (base ** (_snr / base)))
 
             to_jpeg = ToJpegAnalogical(rmax)
             if rr is not None:
@@ -124,14 +129,21 @@ def digital_jpeg(model, dataset, kn, snr, base=10, batch_size=32):
 
 
 @torch.no_grad()
-def digital_resize(model, dataset, kn, snr, base=10, batch_size=32):
-
+def digital_resize(model,
+                   dataset,
+                   kn,
+                   snr,
+                   base=10,
+                   batch_size=32,
+                   previous_results=None):
     model.eval()
     device = next(model.parameters()).device
 
     base_transforms = deepcopy(dataset.transform)
 
     results = {}
+    if previous_results is not None and isinstance(previous_results, dict):
+        results = previous_results
 
     x = dataset[0][0]
     if isinstance(x, torch.Tensor):
@@ -143,13 +155,20 @@ def digital_resize(model, dataset, kn, snr, base=10, batch_size=32):
 
     for _snr in tqdm.tqdm(snr, leave=False):
 
-        results[_snr] = {}
+        if _snr not in results:
+            results[_snr] = {}
 
         for _kn in kn:
+            if _kn in results[_snr]:
+                continue
 
-            L = _kn * np.log2(1 + (base ** (_snr / base) ))
+            L = _kn * np.log2(1 + (base ** (_snr / base)))
             L = np.sqrt(L * np.prod(shape) / 8)
             L = int(np.floor(L))
+
+            if L < 1:
+                results[_snr][_kn] = 0
+                continue
 
             resize = Resize((L, L))
             dataset.transform = Compose([resize, base_transforms])

@@ -138,5 +138,3 @@ class ConcatComplexToRealNN(nn.Module):
             x = x.permute(0, 2, 1)
 
         return x
-
-

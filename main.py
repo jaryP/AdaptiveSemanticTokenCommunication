@@ -263,8 +263,11 @@ def main(cfg: DictConfig):
         ############################
         digital_resize_results = None
         if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-                digital_resize_results = json.load(f)
+            try:
+                with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+                    digital_resize_results = json.load(f)
+            except:
+                pass
 
         digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
                                                 previous_results=digital_resize_results)
@@ -280,8 +283,11 @@ def main(cfg: DictConfig):
 
         jpeg_results = None
         if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-            with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-                jpeg_results = json.load(f)
+            try:
+                with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+                    jpeg_results = json.load(f)
+            except:
+                pass
 
         jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
                                     previous_results=jpeg_results)

@@ -496,12 +496,16 @@ def main(cfg: DictConfig):
                 else:
                     comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
+                log.info(comm_model.blocks)
+
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
                     # log.info(model_dict.keys())
                     log.info(f'Comm model loaded')
                 else:
+                    log.info(f'Training the model')
+
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
 
                     loss_f = nn.CrossEntropyLoss()
@@ -549,8 +553,6 @@ def main(cfg: DictConfig):
 
                         if scheduler is not None:
                             scheduler.step()
-
-                        # log.info(f'Training epoch {epoch} ended')
 
                         with torch.no_grad():
                             communication_pipeline.eval()
@@ -610,7 +612,7 @@ def main(cfg: DictConfig):
                             score = c / t
 
                             bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
-
+                    
                     torch.save(comm_model.state_dict(), comm_model_path)
 
                 final_evaluation = cfg.get('comm_evaluation', {})

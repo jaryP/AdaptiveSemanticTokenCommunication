@@ -14,6 +14,7 @@ def semantic_evaluation(model: SemanticVit,
                         dataset,
                         budgets=None,
                         calculate_flops=True,
+                        batch_size=1,
                         # full_flops=None,
                         **kwargs):
 
@@ -35,7 +36,7 @@ def semantic_evaluation(model: SemanticVit,
         average_dropping = defaultdict(float)
         a_flops = []
 
-        for x, y in DataLoader(dataset, batch_size=1):
+        for x, y in DataLoader(dataset, batch_size=batch_size):
             x, y = x.to(device), y.to(device)
 
             if full_flops is None and calculate_flops:

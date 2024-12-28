@@ -261,41 +261,41 @@ def main(cfg: DictConfig):
         ############################
         ####### DIGITAL RESIZE #####
         ############################
-        digital_resize_results = None
-        if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            try:
-                with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-                    digital_resize_results = json.load(f)
-            except:
-                pass
-
-        digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
-                                                previous_results=digital_resize_results)
-
-        with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-            json.dump(digital_resize_results, f, ensure_ascii=True, indent=4)
-
-        log.info(f'digital_resize baselines evaluation ended')
-
-        ############################
-        ####### DIGITAL   JPEG #####
-        ############################
-
-        jpeg_results = None
-        if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-            try:
-                with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-                    jpeg_results = json.load(f)
-            except:
-                pass
-
-        jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
-                                    previous_results=jpeg_results)
-
-        with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-            json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
-
-        log.info(f'digital_jpeg baselines evaluation ended')
+        # digital_resize_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #             digital_resize_results = json.load(f)
+        #     except:
+        #         pass
+        #
+        # digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                                         previous_results=digital_resize_results)
+        #
+        # with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #     json.dump(digital_resize_results, f, ensure_ascii=True, indent=4)
+        #
+        # log.info(f'digital_resize baselines evaluation ended')
+        #
+        # ############################
+        # ####### DIGITAL   JPEG #####
+        # ############################
+        #
+        # jpeg_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+        #             jpeg_results = json.load(f)
+        #     except:
+        #         pass
+        #
+        # jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                             previous_results=jpeg_results)
+        #
+        # with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+        #     json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
+        #
+        # log.info(f'digital_jpeg baselines evaluation ended')
 
         if 'jscc' in cfg:
 

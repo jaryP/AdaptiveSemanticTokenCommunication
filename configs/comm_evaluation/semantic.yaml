@@ -12,4 +12,4 @@ semantic:
     calculate_flops: No
     n_forward: 5
     _partial_: Yes
-    batch_size: 128
+    batch_size: 1

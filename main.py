@@ -299,53 +299,6 @@ def main(cfg: DictConfig):
 
         if 'jscc' in cfg:
 
-            # from comm.channel import GaussianNoiseChannel
-            #
-            # blocks_before = model.blocks[:6]
-            # blocks_after = model.blocks[6:]
-            #
-            # for i, b in enumerate(blocks_after):
-            #     if hasattr(b, 'base_block'):
-            #         model.blocks[i] = b.base_block
-            #
-            # channel = GaussianNoiseChannel(snr=(-50, 50))
-            #
-            # model.blocks = nn.Sequential(*blocks_before, channel, *blocks_after)
-            #
-            # model.eval()
-            # channel_results = defaultdict(dict)
-            #
-            # last_block = [b for b in model.blocks if isinstance(b, AdaptiveBlock)][-1]
-            #
-            # for alpha in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
-            #     average_masks = 0
-            #
-            #     for snr in np.arange(-50, 50, 5):
-            #         channel.test_snr = snr
-            #
-            #         c, t = 0, 0
-            #         band = 0
-            #
-            #         for x, y in DataLoader(test_dataset, batch_size=32, shuffle=True):
-            #             x = x.to(device)
-            #
-            #             pred = model(x, alpha=alpha)
-            #             band += pred.shape[1]
-            #
-            #             average_masks += ((last_block.last_mask > 0).float().sum(1) / 2 * 198).sum()
-            #
-            #             c += (pred.argmax(-1).cpu() == y).sum().item()
-            #             t += len(x)
-            #
-            #         average_masks = average_masks / t
-            #         channel_results[int(snr)][alpha] = (c / t, average_masks.item())
-            #         print(snr, alpha, channel_results[int(snr)][alpha])
-            #
-            # with open(f'accuracy_results.json', 'w') as f:
-            #     json.dump(channel_results, f, cls=NpEncoder)
-            #
-            # exit()
-
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')
 
@@ -496,8 +449,6 @@ def main(cfg: DictConfig):
                 else:
                     comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
-                log.info(comm_model.blocks)
-
                 if os.path.exists(comm_model_path):
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
@@ -554,65 +505,65 @@ def main(cfg: DictConfig):
                         if scheduler is not None:
                             scheduler.step()
 
-                        with torch.no_grad():
-                            communication_pipeline.eval()
-                            if blocks_after is not None:
-                                blocks_after.eval()
+                        # with torch.no_grad():
+                        #     communication_pipeline.eval()
+                        #     if blocks_after is not None:
+                        #         blocks_after.eval()
+                        #
+                        #     # if (epoch + 1) % 5 == 0 and False:
+                        #     #     pass
+                        #     #     # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
+                        #     #     #
+                        #     #     #     c, t = 0, 0
+                        #     #     #     average_dropping = defaultdict(float)
+                        #     #     #
+                        #     #     #     for x, y in DataLoader(test_dataset, batch_size=1):
+                        #     #     #         x, y = x.to(device), y.to(device)
+                        #     #     #
+                        #     #     #         pred = model(x, alpha=a)
+                        #     #     #
+                        #     #     #         c += (pred.argmax(-1) == y).sum().item()
+                        #     #     #         t += len(x)
+                        #     #     #
+                        #     #     #         for i, b in enumerate(
+                        #     #     #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
+                        #     #     #                  b.last_mask is not None]):
+                        #     #     #             average_dropping[i] += b.last_mask.shape[1]
+                        #     #     #
+                        #     #     #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
+                        #     #     #     v = {k: v / t for k, v in average_dropping.items()}
+                        #     #     #     log.info(f'Model budget {a} has average scoring: {v}')
+                        #     # else:
+                        #     #     if channel is not None and (epoch + 1) % 5 == 0:
+                        #     #         for snr in np.linspace(-10, 10, 20, dtype=int):
+                        #     #             channel.test_snr = snr
+                        #     #
+                        #     #             t, c = 0, 0
+                        #     #
+                        #     #             for x, y in test_dataloader:
+                        #     #                 x, y = x.to(device), y.to(device)
+                        #     #
+                        #     #                 pred = model(x)
+                        #     #                 c += (pred.argmax(-1) == y).sum().item()
+                        #     #                 t += len(x)
+                        #     #
+                        #     #             score = c / t
+                        #     #
+                        #     #             log.info(f'SNR {snr}: {score}')
+                        #     #     else:
+                        #     t, c = 0, 0
+                        #
+                        #     for x, y in test_dataloader:
+                        #         x, y = x.to(device), y.to(device)
+                        #
+                        #         pred = comm_model(x)
+                        #         c += (pred.argmax(-1) == y).sum().item()
+                        #         t += len(x)
+                        #
+                        #     score = c / t
+                        #
+                        #     bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
 
-                            # if (epoch + 1) % 5 == 0 and False:
-                            #     pass
-                            #     # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-                            #     #
-                            #     #     c, t = 0, 0
-                            #     #     average_dropping = defaultdict(float)
-                            #     #
-                            #     #     for x, y in DataLoader(test_dataset, batch_size=1):
-                            #     #         x, y = x.to(device), y.to(device)
-                            #     #
-                            #     #         pred = model(x, alpha=a)
-                            #     #
-                            #     #         c += (pred.argmax(-1) == y).sum().item()
-                            #     #         t += len(x)
-                            #     #
-                            #     #         for i, b in enumerate(
-                            #     #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                            #     #                  b.last_mask is not None]):
-                            #     #             average_dropping[i] += b.last_mask.shape[1]
-                            #     #
-                            #     #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                            #     #     v = {k: v / t for k, v in average_dropping.items()}
-                            #     #     log.info(f'Model budget {a} has average scoring: {v}')
-                            # else:
-                            #     if channel is not None and (epoch + 1) % 5 == 0:
-                            #         for snr in np.linspace(-10, 10, 20, dtype=int):
-                            #             channel.test_snr = snr
-                            #
-                            #             t, c = 0, 0
-                            #
-                            #             for x, y in test_dataloader:
-                            #                 x, y = x.to(device), y.to(device)
-                            #
-                            #                 pred = model(x)
-                            #                 c += (pred.argmax(-1) == y).sum().item()
-                            #                 t += len(x)
-                            #
-                            #             score = c / t
-                            #
-                            #             log.info(f'SNR {snr}: {score}')
-                            #     else:
-                            t, c = 0, 0
-
-                            for x, y in test_dataloader:
-                                x, y = x.to(device), y.to(device)
-
-                                pred = comm_model(x)
-                                c += (pred.argmax(-1) == y).sum().item()
-                                t += len(x)
-
-                            score = c / t
-
-                            bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
-                    
                     torch.save(comm_model.state_dict(), comm_model_path)
 
                 final_evaluation = cfg.get('comm_evaluation', {})

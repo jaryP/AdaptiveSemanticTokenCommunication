@@ -297,8 +297,7 @@ def main(cfg: DictConfig):
         #
         # log.info(f'digital_jpeg baselines evaluation ended')
 
-        if 'jscc' in cfg:
-
+        if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')
 

@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --job-name=6g_adaptive
+#SBATCH --job-name=6g_adaptive_1
 #SBATCH --out=./sout/adaptive_jsccn_margin_1.out
 #SBATCH --open-mode=truncate
 

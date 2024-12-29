@@ -253,10 +253,10 @@ def main(cfg: DictConfig):
                     with open(os.path.join(evaluation_results, f'{key}.json'), 'w') as f:
                         json.dump(results, f, ensure_ascii=True, indent=4)
 
-        log.info(f'Comm baselines evaluation')
-
-        snr = np.arange(-20, 20 + 1, 2.5)
-        kn = np.linspace(0.01, 1., num=20, endpoint=True)
+        # log.info(f'Comm baselines evaluation')
+        #
+        # snr = np.arange(-20, 20 + 1, 2.5)
+        # kn = np.linspace(0.01, 1., num=20, endpoint=True)
 
         ############################
         ####### DIGITAL RESIZE #####

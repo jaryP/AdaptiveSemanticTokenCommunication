@@ -33,7 +33,7 @@ def semantic_evaluation(model: SemanticVit,
     for a in tqdm.tqdm(budgets, leave=False):
 
         c, t = 0, 0
-        average_dropping = defaultdict(float)
+        average_dropping = defaultdict(list)
         a_flops = []
 
         for x, y in DataLoader(dataset, batch_size=batch_size):
@@ -53,13 +53,13 @@ def semantic_evaluation(model: SemanticVit,
             t += len(x)
 
             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
-                average_dropping[i] += b.last_mask.shape[1]
+                average_dropping[i].append(b.last_mask.shape[1])
 
         accuracy[a] = c / t
-        all_sizes[a] = {k: v / t for k, v in average_dropping.items()}
+        all_sizes[a] = {k: (np.mean(v), np.std(v)) for k, v in average_dropping.items()}
 
-        if a in flops:
-            flops[a] = np.mean(a_flops)
+        if len(a_flops) > 0:
+            flops[a] = (np.mean(a_flops), np.std(a_flops))
 
     if len(flops) > 0:
         return {'accuracy': accuracy, 'flops':  flops, 'all_sizes':  all_sizes}

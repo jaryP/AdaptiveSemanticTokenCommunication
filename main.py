@@ -258,6 +258,7 @@ def main(cfg: DictConfig):
         # snr = np.arange(-20, 20 + 1, 2.5)
         # kn = np.linspace(0.01, 1., num=20, endpoint=True)
 
+
         ############################
         ####### DIGITAL RESIZE #####
         ############################

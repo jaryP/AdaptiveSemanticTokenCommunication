@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name=6g_adaptive_half_final
-#SBATCH --out=./sout/adaptive_jsccn_margin_half_2.out
+#SBATCH --out=./sout/adaptive_jsccn_margin_half_final.out
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}

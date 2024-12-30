@@ -22,7 +22,7 @@ source activate eep
 
 for inner_w in 0.5
   do
-  for out_w in 1 0.5 2
+  for out_w in 1 0.5 2 5
   do
 
     srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=$inner_w  method.loss.output_flops_w=$out_w  final_evaluation=semantic +method.model.blocks_to_transform=6 +jscc=null comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0

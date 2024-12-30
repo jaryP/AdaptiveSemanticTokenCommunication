@@ -46,7 +46,8 @@ def semantic_evaluation(model: SemanticVit,
 
             if full_flops is not None:
                 model.current_alpha = a
-                a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0] / full_flops)
+                # a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0] / full_flops)
+                a_flops.append(compute_flops(model, x, verbose=False, print_per_layer_stat=False)[0])
                 model.current_alpha = None
 
             c += (pred.argmax(-1) == y).sum().item()
@@ -62,6 +63,6 @@ def semantic_evaluation(model: SemanticVit,
             flops[a] = (np.mean(a_flops), np.std(a_flops))
 
     if len(flops) > 0:
-        return {'accuracy': accuracy, 'flops':  flops, 'all_sizes':  all_sizes}
+        return {'accuracy': accuracy, 'full_flops': full_flops, 'flops':  flops, 'all_sizes':  all_sizes}
     else:
         return {'accuracy': accuracy, 'all_sizes':  all_sizes}

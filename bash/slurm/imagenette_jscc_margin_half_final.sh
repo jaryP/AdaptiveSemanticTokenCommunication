@@ -8,7 +8,8 @@ sbatch <<EOT
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --job-name="6g_adaptive_half_"$1"_"$2
+#SBATCH --job-name="6g_adaptive_half_final
+_"$1"_"$2
 #SBATCH --out="./sout/6g_adaptive_half_final_${1}_${2}.out"
 #SBATCH --open-mode=truncate
 

@@ -14,6 +14,8 @@ sbatch <<EOT
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}
+echo "$1"
+echo "$2"
 
 cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
 export WANDB_MODE=offline
@@ -26,9 +28,6 @@ source activate eep
 # to run
 # inner_w= 1, 0.5
 # out_w = 1 0.5 2 5
-
-echo $1
-echo $2
 
 inner_w=$1
 out_w=$2

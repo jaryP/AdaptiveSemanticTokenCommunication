@@ -14,8 +14,8 @@ sbatch <<EOT
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}
-echo "$1"
-echo "$2"
+echo ${1}
+echo ${2}
 
 cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
 export WANDB_MODE=offline

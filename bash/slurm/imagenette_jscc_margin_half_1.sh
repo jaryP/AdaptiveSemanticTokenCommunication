@@ -27,6 +27,9 @@ source activate eep
 # inner_w= 1, 0.5
 # out_w = 1 0.5 2 5
 
+echo $1
+echo $2
+
 inner_w=$1
 out_w=$2
 job_name=""

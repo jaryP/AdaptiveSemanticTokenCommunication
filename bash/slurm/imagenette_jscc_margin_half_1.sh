@@ -1,5 +1,8 @@
 #!/bin/sh
 # https://stackoverflow.com/questions/27708656/pass-command-line-arguments-via-sbatch
+# to run
+# inner_w= 1, 0.5
+# out_w = 1 0.5 2 5
 sbatch <<EOT
 #!/bin/sh
 #SBATCH -A IscrC_BEVITIN
@@ -25,18 +28,12 @@ conda init
 #conda activate eep
 source activate eep
 
-# to run
-# inner_w= 1, 0.5
-# out_w = 1 0.5 2 5
 
-inner_w=$1
-out_w=$2
-job_name=""
 #for inner_w in 0.5
 #  do
 #  for out_w in 1 0.5 2 5
 #  do
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=${1}  method.loss.output_flops_w=${2}  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
+#srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=${1}  method.loss.output_flops_w=${2}  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
 #  done
 #done
 EOT

@@ -14,8 +14,8 @@ sbatch <<EOT
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}
-echo ${1}
-echo ${2}
+echo "${1}"
+echo "${2}"
 
 cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
 export WANDB_MODE=offline
@@ -36,7 +36,7 @@ job_name=""
 #  do
 #  for out_w in 1 0.5 2 5
 #  do
-srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=${inner_w}  method.loss.output_flops_w=${out_w}  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=${1}  method.loss.output_flops_w=${2}  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
 #  done
 #done
 EOT

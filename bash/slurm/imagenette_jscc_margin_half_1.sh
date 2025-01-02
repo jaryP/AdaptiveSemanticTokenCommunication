@@ -17,17 +17,14 @@ sbatch <<EOT
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}
-echo "${1}"
-echo "${2}"
 
-cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
-export WANDB_MODE=offline
-module load anaconda3
-module load cuda
-conda init
-#conda activate eep
-source activate eep
-
+#cd /leonardo/home/userexternal/jpomponi/AdaptiveSelectionToken
+#export WANDB_MODE=offline
+#module load anaconda3
+#module load cuda
+#conda init
+##conda activate eep
+#source activate eep
 
 #for inner_w in 0.5
 #  do

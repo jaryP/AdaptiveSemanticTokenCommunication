@@ -13,7 +13,7 @@ sbatch <<EOT
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --job-name="6g_adaptive_half2_"$1"_"$2
-#SBATCH --out="./sout/prova.out"
+#SBATCH --out="./sout/6g_adaptive_half_${1}_${2}.out"
 #SBATCH --open-mode=truncate
 
 echo "NODELIST="${SLURM_NODELIST}

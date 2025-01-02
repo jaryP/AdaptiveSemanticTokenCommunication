@@ -30,7 +30,7 @@ job_name="6g_adaptive_half_${inner_w}_${out_w}"
 #  do
 #  for out_w in 1 0.5 2 5
 #  do
-srun -J $job_name python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=$inner_w  method.loss.output_flops_w=$out_w  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
+srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=margin method.loss.inner_flops_w=$inner_w  method.loss.output_flops_w=$out_w  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0 -J $job_name
 #  done
 #done
 

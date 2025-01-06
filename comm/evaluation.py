@@ -1,3 +1,4 @@
+import math
 from copy import deepcopy
 from io import BytesIO
 from typing import Sequence
@@ -5,6 +6,7 @@ import logging
 
 import numpy as np
 import torch
+import torchvision.transforms.functional
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize
@@ -19,6 +21,7 @@ def gaussian_snr_evaluation(model: SemanticVit,
                             dataset,
                             snr,
                             function: None,
+                            monte_carlo_n=1,
                             **kwargs):
     if function is None:
         function = lambda *x: x
@@ -34,10 +37,14 @@ def gaussian_snr_evaluation(model: SemanticVit,
         snr = [snr]
 
     results = {}
-    for _snr in tqdm.tqdm(snr, leave=False):
-        channel.test_snr = _snr
-        _results = function(model=model, dataset=dataset, **kwargs)
-        results[_snr] = _results
+
+    for n in range(monte_carlo_n):
+        _results = {}
+        for _snr in tqdm.tqdm(snr, leave=False):
+            channel.test_snr = _snr
+            _results[_snr] = function(model=model, dataset=dataset, **kwargs)
+
+        results[n] = _results
 
     return results
 
@@ -172,6 +179,88 @@ def digital_resize(model,
 
             resize = Resize((L, L))
             dataset.transform = Compose([resize, base_transforms])
+
+            tot = 0
+            cor = 0
+
+            for x, y in DataLoader(dataset, batch_size=batch_size):
+                x, y = x.to(device), y.to(device)
+
+                pred = model(x).argmax(-1)
+
+                correct = pred.eq(y.view_as(pred))
+
+                tot += len(x)
+                cor += correct.sum().item()
+
+            results[_snr][_kn] = cor / tot
+
+    dataset.transform = base_transforms
+
+    return results
+
+
+@torch.no_grad()
+def analog_resize(model,
+                  dataset,
+                  kn,
+                  snr,
+                  base=10,
+                  batch_size=32,
+                  previous_results=None):
+    # TODO: TEST
+    class AnalogNoiseResized(torch.nn.Module):
+
+        def __init__(self, compressions, snr):
+            super().__init__()
+            self.compressions = compressions
+            self.snr = snr
+
+        def forward(self, img):
+            w, h = img.size
+
+            img = torchvision.transforms.functional.resize(img, [w * self.compressions, w * self.compressions])
+
+            signal_power = torch.linalg.norm(x, ord=2, dim=None, keepdim=True)
+            size = img.numel()
+            signal_power = signal_power / size
+            noise_power = (signal_power / (10 ** (self.snr / 10)))
+            std = torch.sqrt(noise_power)
+
+            noise = torch.randn_like(x) * std
+            img = img + noise
+
+            img = torchvision.transforms.functional.resize(img, [w, h])
+
+            return img
+
+    model.eval()
+    device = next(model.parameters()).device
+
+    base_transforms = deepcopy(dataset.transform)
+
+    results = {}
+    if previous_results is not None and isinstance(previous_results, dict):
+        results = previous_results
+
+    x = dataset[0][0]
+    if isinstance(x, torch.Tensor):
+        shape = x.shape[1:]
+    elif isinstance(x, Image.Image):
+        shape = x.size
+    else:
+        shape = x.shape[:-1]
+
+    for _snr in tqdm.tqdm(snr, leave=False):
+
+        if _snr not in results:
+            results[_snr] = {}
+
+        for _kn in kn:
+            if _kn in results[_snr]:
+                continue
+
+            dataset.transform = Compose([base_transforms, AnalogNoiseResized(_kn, _snr)])
 
             tot = 0
             cor = 0

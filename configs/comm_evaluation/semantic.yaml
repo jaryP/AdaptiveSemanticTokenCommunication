@@ -1,5 +1,7 @@
 semantic:
   _target_: comm.evaluation.gaussian_snr_evaluation
+  monte_carlo_n: 5
+  overwrite: Yes
   snr:
     _target_: builtins.range
     _args_: [-50, 50, 5]
@@ -10,6 +12,5 @@ semantic:
     _target_: methods.proposal.semantic_evaluation
     budgets: [0.001, 0.001, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     calculate_flops: No
-    n_forward: 5
     _partial_: Yes
     batch_size: 1

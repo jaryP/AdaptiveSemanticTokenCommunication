@@ -16,7 +16,7 @@ from torch import nn
 
 from torch.utils.data import DataLoader
 
-from comm.evaluation import digital_jpeg, digital_resize
+from comm.evaluation import digital_jpeg, digital_resize, analog_resize
 from methods.proposal import AdaptiveBlock
 from serialization import get_hash, get_path
 from utils import get_pretrained_model, CommunicationPipeline
@@ -258,6 +258,25 @@ def main(cfg: DictConfig):
         # snr = np.arange(-50, 50 + 1, 2.5)
         # kn = np.linspace(0.01, 1., num=20, endpoint=True)
         #
+        # ###########################
+        # ###### ANALOG RESIZE #####
+        # ###########################
+        # analog_resize_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #             analog_resize_results = json.load(f)
+        #     except:
+        #         pass
+        #
+        # analog_resize_results = analog_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                                       previous_results=analog_resize_results)
+        #
+        # with open(os.path.join(evaluation_results, f'analog_resize.json'), 'w') as f:
+        #     json.dump(analog_resize_results, f, ensure_ascii=True, indent=4)
+        #
+        # log.info(f'analog_resize baselines evaluation ended')
+
         # ###########################
         # ###### DIGITAL RESIZE #####
         # ###########################

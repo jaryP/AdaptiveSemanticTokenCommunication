@@ -38,7 +38,7 @@ def gaussian_snr_evaluation(model: SemanticVit,
 
     results = {}
 
-    for n in range(monte_carlo_n):
+    for n in tqdm.tqdm(range(monte_carlo_n), leave=False):
         _results = {}
         for _snr in tqdm.tqdm(snr, leave=False):
             channel.test_snr = _snr
@@ -171,7 +171,7 @@ def digital_resize(model,
 
             L = _kn * np.log2(1 + (base ** (_snr / base)))
             L = np.sqrt(L * np.prod(shape) / 8)
-            L = int(np.floor(L))
+            L = np.rint(L)
 
             if L < 1:
                 results[_snr][_kn] = 0
@@ -219,16 +219,17 @@ def analog_resize(model,
         def forward(self, img):
             w, h = img.size
 
-            img = torchvision.transforms.functional.resize(img, [w * self.compressions, w * self.compressions])
+            img = torchvision.transforms.functional.resize(img, [int(np.rint(w * self.compressions)),
+                                                                 int(np.rint(w * self.compressions))])
 
-            signal_power = torch.linalg.norm(x, ord=2, dim=None, keepdim=True)
-            size = img.numel()
+            signal_power = torch.linalg.norm(x.view(-1), ord=2, dim=None, keepdim=True)
+            size = w * h * 3
             signal_power = signal_power / size
             noise_power = (signal_power / (10 ** (self.snr / 10)))
             std = torch.sqrt(noise_power)
 
             noise = torch.randn_like(x) * std
-            img = img + noise
+            img = torch.tensor(img) + noise
 
             img = torchvision.transforms.functional.resize(img, [w, h])
 
@@ -260,7 +261,11 @@ def analog_resize(model,
             if _kn in results[_snr]:
                 continue
 
-            dataset.transform = Compose([base_transforms, AnalogNoiseResized(_kn, _snr)])
+            if np.rint(shape[0] * _kn) < 1:
+                results[_snr][_kn] = 0
+                continue
+
+            dataset.transform = Compose([AnalogNoiseResized(_kn, _snr), base_transforms])
 
             tot = 0
             cor = 0

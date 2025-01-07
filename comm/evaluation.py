@@ -43,6 +43,7 @@ def gaussian_snr_evaluation(model: SemanticVit,
         for _snr in tqdm.tqdm(snr, leave=False):
             channel.test_snr = _snr
             _results[_snr] = function(model=model, dataset=dataset, **kwargs)
+            print(_results[_snr])
 
         results[n] = _results
 

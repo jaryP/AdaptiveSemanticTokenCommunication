@@ -468,7 +468,7 @@ def main(cfg: DictConfig):
                     comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
-                overwrite_experiments = experiment_cfg.get('overwrite_experiments', overwrite_model)
+                overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
 
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
@@ -591,10 +591,12 @@ def main(cfg: DictConfig):
                 if final_evaluation is None:
                     final_evaluation = {}
 
+                model.eval()
+
                 for key, value in final_evaluation.items():
                     # overwrite = value.get('overwrite', False)
 
-                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_experiments:
+                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_evaluation:
 
                         with warnings.catch_warnings(action="ignore"):
                             results = hydra.utils.instantiate(value, dataset=test_dataset, model=comm_model)

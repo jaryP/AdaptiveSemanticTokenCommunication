@@ -6,7 +6,7 @@ gaussian_noise_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -25,7 +25,7 @@ gaussian_no_training_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -44,7 +44,7 @@ gaussian_no_training_025_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -63,7 +63,7 @@ gaussian_noise_025_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -82,7 +82,7 @@ gaussian_no_training_01_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -101,7 +101,7 @@ gaussian_noise_01_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -10, 10 ]
+    snr: [ -100, 100 ]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN

@@ -219,21 +219,22 @@ def analog_resize(model,
         def forward(self, img):
             w, h = img.size
 
+            img = torchvision.transforms.functional.to_tensor(img)
             img = torchvision.transforms.functional.resize(img, [int(np.rint(w * self.compressions)),
                                                                  int(np.rint(w * self.compressions))])
 
             signal_power = torch.linalg.norm(x.view(-1), ord=2, dim=None, keepdim=True)
-            size = w * h * 3
+            size = img.numel()
             signal_power = signal_power / size
             noise_power = (signal_power / (10 ** (self.snr / 10)))
             std = torch.sqrt(noise_power)
 
-            noise = torch.randn_like(x) * std
-            img = torch.tensor(img) + noise
+            noise = torch.randn_like(img) * std
+            img = img + noise
 
             img = torchvision.transforms.functional.resize(img, [w, h])
 
-            return img
+            return torchvision.transforms.functional.to_pil_image(img)
 
     model.eval()
     device = next(model.parameters()).device

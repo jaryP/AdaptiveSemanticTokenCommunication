@@ -1,6 +1,6 @@
 semantic:
   _target_: comm.evaluation.gaussian_snr_evaluation
-  monte_carlo_n: 5
+  monte_carlo_n: 1
   overwrite: Yes
   snr:
     _target_: builtins.range

@@ -591,7 +591,7 @@ def main(cfg: DictConfig):
                 if final_evaluation is None:
                     final_evaluation = {}
 
-                model.eval()
+                comm_model.eval()
 
                 for key, value in final_evaluation.items():
                     # overwrite = value.get('overwrite', False)

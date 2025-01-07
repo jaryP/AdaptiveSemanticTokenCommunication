@@ -261,20 +261,20 @@ def main(cfg: DictConfig):
         ###########################
         ###### ANALOG RESIZE #####
         ###########################
-        analog_resize_results = None
-        if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            try:
-                with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-                    analog_resize_results = json.load(f)
-            except:
-                pass
-
-        analog_resize_results = analog_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
-                                              previous_results=analog_resize_results)
-
-        with open(os.path.join(evaluation_results, f'analog_resize.json'), 'w') as f:
-            json.dump(analog_resize_results, f, ensure_ascii=True, indent=4)
+        # analog_resize_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #             analog_resize_results = json.load(f)
+        #     except:
+        #         pass
         #
+        # analog_resize_results = analog_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                                       previous_results=analog_resize_results)
+        #
+        # with open(os.path.join(evaluation_results, f'analog_resize.json'), 'w') as f:
+        #     json.dump(analog_resize_results, f, ensure_ascii=True, indent=4)
+        # #
         # log.info(f'analog_resize baselines evaluation ended')
 
         # ###########################
@@ -467,7 +467,10 @@ def main(cfg: DictConfig):
                 else:
                     comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
-                if os.path.exists(comm_model_path):
+                overwrite_model = experiment_cfg.get('overwrite_model', False)
+                overwrite_experiments = experiment_cfg.get('overwrite_experiments', overwrite_model)
+
+                if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
                     # log.info(model_dict.keys())
@@ -589,9 +592,9 @@ def main(cfg: DictConfig):
                     final_evaluation = {}
 
                 for key, value in final_evaluation.items():
-                    overwrite = value.get('overwrite', False)
+                    # overwrite = value.get('overwrite', False)
 
-                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite:
+                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_experiments:
 
                         with warnings.catch_warnings(action="ignore"):
                             results = hydra.utils.instantiate(value, dataset=test_dataset, model=comm_model)

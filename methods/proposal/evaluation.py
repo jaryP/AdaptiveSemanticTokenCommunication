@@ -57,7 +57,7 @@ def semantic_evaluation(model: SemanticVit,
                 if b.last_mask.shape[1] < b.num_patches:
                     average_dropping[i].append(b.last_mask.shape[1])
                 else:
-                    average_dropping[i].extend(b.last_mask.mean(1).cpu().detach().tolist())
+                    average_dropping[i].extend(b.last_mask.mean(1).squeeze(-1).cpu().detach().tolist())
 
         accuracy[a] = c / t
 

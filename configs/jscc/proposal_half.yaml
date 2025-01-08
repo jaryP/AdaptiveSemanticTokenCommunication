@@ -1,5 +1,5 @@
 gaussian_noise_3:
-  overwrite_model: Yes
+  overwrite_model: No
   overwrite_evaluation: Yes
   splitting_point: 3
   unwrap_after: Yes
@@ -41,6 +41,7 @@ gaussian_noise_3:
 #    _target_: comm.pipeline.ConcatComplexToRealNN
 #    n_layers: 3
 gaussian_no_training_3:
+  overwrite_model: Yes
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -61,6 +62,7 @@ gaussian_no_training_3:
     n_layers: 3
 gaussian_no_training_025_3:
   splitting_point: 3
+  overwrite_model: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 100
@@ -101,6 +103,7 @@ gaussian_noise_025_3:
 gaussian_no_training_01_3:
   splitting_point: 3
   unwrap_after: Yes
+  overwrite_model: Yes
   unwrap_before: No
   epochs: 100
   freeze_model: Yes

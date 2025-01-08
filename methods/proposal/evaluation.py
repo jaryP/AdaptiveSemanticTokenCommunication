@@ -54,9 +54,13 @@ def semantic_evaluation(model: SemanticVit,
             t += len(x)
 
             for i, b in enumerate([b for b in model.blocks if isinstance(b, AdaptiveBlock) if b.last_mask is not None]):
-                average_dropping[i].append(b.last_mask.shape[1])
+                if b.last_mask.shape[1] < b.num_patches:
+                    average_dropping[i].append(b.last_mask.shape[1])
+                else:
+                    average_dropping[i].append(b.last_mask.mean(1).sum().cpu().detach().numpy())
 
         accuracy[a] = c / t
+
         all_sizes[a] = {k: (np.mean(v), np.std(v)) for k, v in average_dropping.items()}
 
         if len(a_flops) > 0:

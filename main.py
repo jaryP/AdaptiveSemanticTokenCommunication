@@ -17,7 +17,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from comm.evaluation import digital_jpeg, digital_resize, analog_resize
-from methods.proposal import AdaptiveBlock
+from methods.proposal import AdaptiveBlock, semantic_evaluation
 from serialization import get_hash, get_path
 from utils import get_pretrained_model, CommunicationPipeline
 
@@ -316,6 +316,8 @@ def main(cfg: DictConfig):
         #
         # log.info(f'digital_jpeg baselines evaluation ended')
 
+        # semantic_evaluation(model, test_dataset, batch_size=1)
+
         if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')
@@ -503,9 +505,10 @@ def main(cfg: DictConfig):
                     blocks_before.eval()
 
                     for epoch in bar:
-                        communication_pipeline.train()
-                        if blocks_after is not None:
-                            blocks_after.train()
+                        comm_model.train()
+                        # communication_pipeline.train()
+                        # if blocks_after is not None:
+                        #     blocks_after.train()
 
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)
@@ -584,6 +587,15 @@ def main(cfg: DictConfig):
                         #     score = c / t
                         #
                         #     bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
+
+                        res = semantic_evaluation(comm_model,
+                                                  test_dataset,
+                                                  batch_size=128,
+                                                  budgets=[0.001, 0.5],
+                                                  calculate_flops=False)
+
+                        print(res['accuracy'])
+                        print(res['all_sizes'])
 
                     torch.save(comm_model.state_dict(), comm_model_path)
 

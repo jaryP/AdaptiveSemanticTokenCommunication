@@ -172,7 +172,7 @@ def digital_resize(model,
 
             L = _kn * np.log2(1 + (base ** (_snr / base)))
             L = np.sqrt(L * np.prod(shape) / 8)
-            L = np.rint(L)
+            L = int(np.rint(L))
 
             if L < 1:
                 results[_snr][_kn] = 0

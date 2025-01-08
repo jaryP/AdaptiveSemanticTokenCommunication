@@ -613,9 +613,10 @@ def main(cfg: DictConfig):
                         with warnings.catch_warnings(action="ignore"):
                             results = hydra.utils.instantiate(value, dataset=test_dataset, model=comm_model)
 
+                        print(results)
                         if results is not None:
                             with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:
-                                json.dump(results, f, ensure_ascii=True, indent=4)
+                                json.dump(results, f, ensure_ascii=True, indent=4, cls=NpEncoder)
 
                         log.info(f'{key} evaluation ended')
 

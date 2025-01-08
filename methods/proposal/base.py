@@ -59,7 +59,7 @@ class AdaptiveBlock(nn.Module):
 
         if not self.training and len(x) == 1:
             bmask = mask > 0
-            self.last_mask = bmask.float()
+            self.last_mask = bmask
 
             if mask.sum(1) == 2:
                 return self._block(x), None

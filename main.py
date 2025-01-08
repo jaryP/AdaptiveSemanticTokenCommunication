@@ -318,6 +318,14 @@ def main(cfg: DictConfig):
 
         # semantic_evaluation(model, test_dataset, batch_size=1)
 
+        res = semantic_evaluation(model,
+                                  test_dataset,
+                                  batch_size=128,
+                                  budgets=[0.001, 0.5, 0.9],
+                                  calculate_flops=False)
+        print(res['accuracy'])
+        print(res['all_sizes'])
+
         if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')
@@ -472,7 +480,6 @@ def main(cfg: DictConfig):
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
 
-
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
@@ -515,9 +522,10 @@ def main(cfg: DictConfig):
 
                     for epoch in bar:
                         comm_model.train()
+
                         # communication_pipeline.train()
-                        # if blocks_after is not None:
-                        #     blocks_after.train()
+                        if blocks_before is not None:
+                            blocks_before.train()
 
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)
@@ -600,7 +608,7 @@ def main(cfg: DictConfig):
                         res = semantic_evaluation(comm_model,
                                                   test_dataset,
                                                   batch_size=128,
-                                                  budgets=[0.001, 0.5],
+                                                  budgets=[0.001, 0.5, 0.9],
                                                   calculate_flops=False)
 
                         print(res['accuracy'])

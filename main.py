@@ -5,6 +5,7 @@ import random
 import warnings
 from collections import defaultdict
 from copy import deepcopy
+from itertools import chain
 
 import hydra
 
@@ -499,14 +500,19 @@ def main(cfg: DictConfig):
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
 
                     loss_f = nn.CrossEntropyLoss()
+                    freeze_model = experiment_cfg.get('freeze_model', True)
 
-                    if experiment_cfg.get('freeze_model', False):
-                        for p in blocks_before.parameters():
-                            if p.requires_grad:
-                                p.requires_grad_(False)
+                    if freeze_model:
+                        # for p in blocks_before.parameters():
+                        #     if p.requires_grad:
+                        #         p.requires_grad_(False)
 
-                    optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                        params=comm_model.parameters())
+                        optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                            params=comm_model.parameters())
+                    else:
+                        optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                            params=chain(communication_pipeline.parameters(),
+                                                                         blocks_after.parameters()))
 
                     scheduler = None
                     if 'scheduler' in cfg:
@@ -524,8 +530,8 @@ def main(cfg: DictConfig):
                         comm_model.train()
 
                         # communication_pipeline.train()
-                        if blocks_before is not None:
-                            blocks_before.train()
+                        if freeze_model:
+                            blocks_before.eval()
 
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)

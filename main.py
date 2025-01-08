@@ -465,16 +465,25 @@ def main(cfg: DictConfig):
                     device)
 
                 if blocks_after is not None:
-                    comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                    comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
                 else:
-                    comm_model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
+                    comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
 
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
 
+
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
+
+                    # if (model_dict['budget_token_lower'] - model.budget_token_lower).mean() > 1e-5:
+                    #     # model_dict = {k:v for k, v in model_dict.items() if k.startswith('_model') or k in ["budget_token_lower", "budget_token_upper"]}
+                    #     comm_model._model.blocks = comm_model.blocks
+                    #     del comm_model.blocks
+                    # else:
+                    #     comm_model.load_state_dict(model_dict)
+
                     # log.info(model_dict.keys())
                     log.info(f'Comm model loaded')
                 else:

@@ -165,6 +165,12 @@ class SemanticVit(nn.Module):
         except AttributeError:
             return getattr(self._model, item)
 
+    # def __setattr__(self, name, value):
+    #     if hasattr(self._model, name):
+    #         self._model.__setattr__(name, value)
+    #     else:
+    #         self.name = value
+
     def forward_features(self, x: torch.Tensor, alpha=0.5) -> torch.Tensor:
         x = self.patch_embed(x)
         x, alpha = self._pos_embed(x, alpha=alpha)

@@ -319,14 +319,6 @@ def main(cfg: DictConfig):
 
         # semantic_evaluation(model, test_dataset, batch_size=1)
 
-        res = semantic_evaluation(model,
-                                  test_dataset,
-                                  batch_size=128,
-                                  budgets=[0.001, 0.5, 0.9],
-                                  calculate_flops=False)
-        print(res['accuracy'])
-        print(res['all_sizes'])
-
         if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')
@@ -481,6 +473,14 @@ def main(cfg: DictConfig):
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
 
+                # res = semantic_evaluation(model,
+                #                           test_dataset,
+                #                           batch_size=128,
+                #                           budgets=[0.001, 0.5, 0.9],
+                #                           calculate_flops=False)
+                # print(res['accuracy'])
+                # print(res['all_sizes'])
+
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
@@ -502,7 +502,7 @@ def main(cfg: DictConfig):
                     loss_f = nn.CrossEntropyLoss()
                     freeze_model = experiment_cfg.get('freeze_model', True)
 
-                    if freeze_model:
+                    if not freeze_model:
                         # for p in blocks_before.parameters():
                         #     if p.requires_grad:
                         #         p.requires_grad_(False)

@@ -496,23 +496,30 @@ def main(cfg: DictConfig):
                     overwrite_evaluation = True
 
                     log.info(f'Training the model')
-                        
+
                     gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
 
-                    loss_f = nn.CrossEntropyLoss()
                     freeze_model = experiment_cfg.get('freeze_model', True)
+                    mse = experiment_cfg.get('mse', False)
 
-                    if not freeze_model:
-                        # for p in blocks_before.parameters():
-                        #     if p.requires_grad:
-                        #         p.requires_grad_(False)
-
+                    if mse:
+                        loss_f = nn.MSELoss()
                         optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                            params=comm_model.parameters())
+                                                            params=communication_pipeline.parameters())
                     else:
-                        optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                                                            params=chain(communication_pipeline.parameters(),
-                                                                         blocks_after.parameters()))
+                        loss_f = nn.CrossEntropyLoss()
+
+                        if not freeze_model:
+                            # for p in blocks_before.parameters():
+                            #     if p.requires_grad:
+                            #         p.requires_grad_(False)
+
+                            optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                                params=comm_model.parameters())
+                        else:
+                            optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
+                                                                params=chain(communication_pipeline.parameters(),
+                                                                             blocks_after.parameters()))
 
                     scheduler = None
                     if 'scheduler' in cfg:
@@ -530,14 +537,19 @@ def main(cfg: DictConfig):
                         comm_model.train()
 
                         # communication_pipeline.train()
-                        if freeze_model:
+                        if freeze_model or mse:
                             blocks_before.eval()
+                        if mse:
+                            blocks_after.eval()
 
                         for x, y in train_dataloader:
                             x, y = x.to(device), y.to(device)
 
                             pred = comm_model(x)
-                            loss = loss_f(pred, y)
+                            if mse:
+                                loss = loss_f(communication_pipeline.input, communication_pipeline.output)
+                            else:
+                                loss = loss_f(pred, y)
 
                             epoch_losses.append(loss.item())
 

@@ -207,6 +207,8 @@ class CommunicationPipeline(nn.Module):
         self.channel = channel if channel is not None else lambda x: x
 
     def forward(self, x, snr=None):
+        self.input = x
+
         if not self.training:
             mask = (x.sum(dim=-1, keepdim=True) != 0).float()
 
@@ -224,4 +226,5 @@ class CommunicationPipeline(nn.Module):
 
             decoded = self.decoder(x)
 
+        self.output = decoded
         return decoded

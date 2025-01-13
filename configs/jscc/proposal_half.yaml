@@ -241,3 +241,83 @@ gaussian_no_training_0001_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
+gaussian_noise_005_3_m20_p20:
+  overwrite_model: No
+  splitting_point: 3
+  unwrap_after: Yes
+  unwrap_before: No
+  epochs: 25
+  freeze_model: Yes
+  channel:
+    _target_: comm.channel.GaussianNoiseChannel
+    snr: [ -20 , 20 ]
+    use_training_snr: Yes
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.05
+    n_layers: 3
+    normalize: Yes
+    drop_last_activation: Yes
+  decoder:
+    _target_: comm.pipeline.ConcatComplexToRealNN
+    n_layers: 3
+gaussian_no_training_005_3:
+  overwrite_model: No
+  splitting_point: 3
+  unwrap_after: Yes
+  unwrap_before: No
+  epochs: 25
+  freeze_model: Yes
+  channel:
+    _target_: comm.channel.GaussianNoiseChannel
+    snr: [ -20, 20 ]
+    use_training_snr: No
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.05
+    n_layers: 3
+    normalize: Yes
+    drop_last_activation: Yes
+  decoder:
+    _target_: comm.pipeline.ConcatComplexToRealNN
+    n_layers: 3
+gaussian_noise_001_3_m20_p20:
+  overwrite_model: No
+  splitting_point: 3
+  unwrap_after: Yes
+  unwrap_before: No
+  epochs: 25
+  freeze_model: Yes
+  channel:
+    _target_: comm.channel.GaussianNoiseChannel
+    snr: [ -20 , 20 ]
+    use_training_snr: Yes
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.01
+    n_layers: 3
+    normalize: Yes
+    drop_last_activation: Yes
+  decoder:
+    _target_: comm.pipeline.ConcatComplexToRealNN
+    n_layers: 3
+gaussian_no_training_001_3:
+  overwrite_model: No
+  splitting_point: 3
+  unwrap_after: Yes
+  unwrap_before: No
+  epochs: 25
+  freeze_model: Yes
+  channel:
+    _target_: comm.channel.GaussianNoiseChannel
+    snr: [ -20, 20 ]
+    use_training_snr: No
+  encoder:
+    _target_: comm.pipeline.BaseRealToComplexNN
+    output_size: 0.01
+    n_layers: 3
+    normalize: Yes
+    drop_last_activation: Yes
+  decoder:
+    _target_: comm.pipeline.ConcatComplexToRealNN
+    n_layers: 3

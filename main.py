@@ -259,9 +259,6 @@ def main(cfg: DictConfig):
         snr = np.arange(-50, 50 + 1, 2.5)
         kn = np.linspace(0.01, 1., num=20, endpoint=True)
 
-        # snr = [0]
-        # kn = [0.5]
-
         ##########################
         ##### ANALOG RESIZE #####
         ##########################
@@ -289,8 +286,8 @@ def main(cfg: DictConfig):
             try:
                 with open(os.path.join(evaluation_results, f'digital_resize.json'), 'r') as f:
                     digital_resize_results = json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
         digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
                                                 previous_results=digital_resize_results)
@@ -309,8 +306,8 @@ def main(cfg: DictConfig):
             try:
                 with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'r') as f:
                     jpeg_results = json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
         jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
                                     previous_results=jpeg_results)
@@ -319,7 +316,7 @@ def main(cfg: DictConfig):
             json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
 
         log.info(f'digital_jpeg baselines evaluation ended')
-
+        
         if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 log.info(f'Comm experiment called {experiment_key}')

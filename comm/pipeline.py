@@ -7,7 +7,7 @@ from torch import nn
 
 def get_layers(input_size, output_size=1.0, n_layers=2, n_copy=1, invert=False, drop_last_activation=False):
     if isinstance(output_size, float):
-        output_size = int(input_size * output_size)
+        output_size = max(int(input_size * output_size), 1)
 
     shapes = np.linspace(input_size, output_size, num=n_layers + 1, endpoint=True, dtype=int)
 

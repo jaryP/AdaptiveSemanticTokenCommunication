@@ -256,7 +256,7 @@ def main(cfg: DictConfig):
 
         log.info(f'Comm baselines evaluation')
 
-        snr = np.arange(-50, 50 + 1, 2.5)
+        snr = np.arange(-20, 20 + 1, 2.5)
         kn = np.linspace(0.01, 1., num=20, endpoint=True)
 
         ##########################
@@ -281,41 +281,41 @@ def main(cfg: DictConfig):
         ########################
         ### DIGITAL RESIZE #####
         ########################
-        digital_resize_results = None
-        if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
-            try:
-                with open(os.path.join(evaluation_results, f'digital_resize.json'), 'r') as f:
-                    digital_resize_results = json.load(f)
-            except Exception as e:
-                print(e)
-
-        digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
-                                                previous_results=digital_resize_results)
-
-        with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
-            json.dump(digital_resize_results, f, ensure_ascii=True, indent=4)
-
-        log.info(f'digital_resize baselines evaluation ended')
-
-        ############################
-        ####### DIGITAL   JPEG #####
-        ############################
-
-        jpeg_results = None
-        if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
-            try:
-                with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'r') as f:
-                    jpeg_results = json.load(f)
-            except Exception as e:
-                print(e)
-
-        jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
-                                    previous_results=jpeg_results)
-
-        with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
-            json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
-
-        log.info(f'digital_jpeg baselines evaluation ended')
+        # digital_resize_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_resize.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_resize.json'), 'r') as f:
+        #             digital_resize_results = json.load(f)
+        #     except Exception as e:
+        #         print(e)
+        #
+        # digital_resize_results = digital_resize(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                                         previous_results=digital_resize_results)
+        #
+        # with open(os.path.join(evaluation_results, f'digital_resize.json'), 'w') as f:
+        #     json.dump(digital_resize_results, f, ensure_ascii=True, indent=4)
+        #
+        # log.info(f'digital_resize baselines evaluation ended')
+        #
+        # ############################
+        # ####### DIGITAL   JPEG #####
+        # ############################
+        #
+        # jpeg_results = None
+        # if os.path.exists(os.path.join(evaluation_results, f'digital_jpeg.json')):
+        #     try:
+        #         with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'r') as f:
+        #             jpeg_results = json.load(f)
+        #     except Exception as e:
+        #         print(e)
+        #
+        # jpeg_results = digital_jpeg(model=model, dataset=test_dataset, kn=kn, snr=snr, batch_size=256,
+        #                             previous_results=jpeg_results)
+        #
+        # with open(os.path.join(evaluation_results, f'digital_jpeg.json'), 'w') as f:
+        #     json.dump(jpeg_results, f, ensure_ascii=True, indent=4)
+        #
+        # log.info(f'digital_jpeg baselines evaluation ended')
         
         if cfg.get('jscc', None) is not None:
             for experiment_key, experiment_cfg in cfg['jscc'].items():

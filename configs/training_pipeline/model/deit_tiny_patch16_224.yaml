@@ -1,3 +1,0 @@
-_target_: timm.create_model
-model_name: 'deit_tiny_patch16_224.fb_in1k'
-pretrained: True

@@ -1,11 +1,12 @@
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 
 from methods.proposal import SemanticVit
 
 
 @torch.no_grad()
-def evaluation(model: SemanticVit,
+def evaluation(model: nn.Module,
                dataset,
                **kwargs):
 

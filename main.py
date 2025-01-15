@@ -511,26 +511,10 @@ def main(cfg: DictConfig):
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
 
-                # res = semantic_evaluation(model,
-                #                           test_dataset,
-                #                           batch_size=128,
-                #                           budgets=[0.001, 0.5, 0.9],
-                #                           calculate_flops=False)
-                # print(res['accuracy'])
-                # print(res['all_sizes'])
-
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
                     comm_model.load_state_dict(model_dict)
 
-                    # if (model_dict['budget_token_lower'] - model.budget_token_lower).mean() > 1e-5:
-                    #     # model_dict = {k:v for k, v in model_dict.items() if k.startswith('_model') or k in ["budget_token_lower", "budget_token_upper"]}
-                    #     comm_model._model.blocks = comm_model.blocks
-                    #     del comm_model.blocks
-                    # else:
-                    #     comm_model.load_state_dict(model_dict)
-
-                    # log.info(model_dict.keys())
                     log.info(f'Comm model loaded')
                 else:
                     overwrite_evaluation = True
@@ -550,10 +534,6 @@ def main(cfg: DictConfig):
                         loss_f = nn.CrossEntropyLoss()
 
                         if not freeze_model:
-                            # for p in blocks_before.parameters():
-                            #     if p.requires_grad:
-                            #         p.requires_grad_(False)
-
                             optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
                                                                 params=comm_model.parameters())
                         else:
@@ -604,74 +584,6 @@ def main(cfg: DictConfig):
                         if scheduler is not None:
                             scheduler.step()
 
-                        # with torch.no_grad():
-                        #     communication_pipeline.eval()
-                        #     if blocks_after is not None:
-                        #         blocks_after.eval()
-                        #
-                        #     # if (epoch + 1) % 5 == 0 and False:
-                        #     #     pass
-                        #     #     # for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-                        #     #     #
-                        #     #     #     c, t = 0, 0
-                        #     #     #     average_dropping = defaultdict(float)
-                        #     #     #
-                        #     #     #     for x, y in DataLoader(test_dataset, batch_size=1):
-                        #     #     #         x, y = x.to(device), y.to(device)
-                        #     #     #
-                        #     #     #         pred = model(x, alpha=a)
-                        #     #     #
-                        #     #     #         c += (pred.argmax(-1) == y).sum().item()
-                        #     #     #         t += len(x)
-                        #     #     #
-                        #     #     #         for i, b in enumerate(
-                        #     #     #                 [b for b in model.blocks if isinstance(b, AdaptiveBlock) if
-                        #     #     #                  b.last_mask is not None]):
-                        #     #     #             average_dropping[i] += b.last_mask.shape[1]
-                        #     #     #
-                        #     #     #     log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                        #     #     #     v = {k: v / t for k, v in average_dropping.items()}
-                        #     #     #     log.info(f'Model budget {a} has average scoring: {v}')
-                        #     # else:
-                        #     #     if channel is not None and (epoch + 1) % 5 == 0:
-                        #     #         for snr in np.linspace(-10, 10, 20, dtype=int):
-                        #     #             channel.test_snr = snr
-                        #     #
-                        #     #             t, c = 0, 0
-                        #     #
-                        #     #             for x, y in test_dataloader:
-                        #     #                 x, y = x.to(device), y.to(device)
-                        #     #
-                        #     #                 pred = model(x)
-                        #     #                 c += (pred.argmax(-1) == y).sum().item()
-                        #     #                 t += len(x)
-                        #     #
-                        #     #             score = c / t
-                        #     #
-                        #     #             log.info(f'SNR {snr}: {score}')
-                        #     #     else:
-                        #     t, c = 0, 0
-                        #
-                        #     for x, y in test_dataloader:
-                        #         x, y = x.to(device), y.to(device)
-                        #
-                        #         pred = comm_model(x)
-                        #         c += (pred.argmax(-1) == y).sum().item()
-                        #         t += len(x)
-                        #
-                        #     score = c / t
-                        #
-                        #     bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
-
-                        # res = semantic_evaluation(comm_model,
-                        #                           test_dataset,
-                        #                           batch_size=128,
-                        #                           budgets=[0.001, 0.5, 0.9],
-                        #                           calculate_flops=False)
-                        #
-                        # print(res['accuracy'])
-                        # print(res['all_sizes'])
-
                     torch.save(comm_model.state_dict(), comm_model_path)
 
                 final_evaluation = cfg.get('comm_evaluation', {})
@@ -681,7 +593,6 @@ def main(cfg: DictConfig):
                 comm_model.eval()
 
                 for key, value in final_evaluation.items():
-                    # overwrite = value.get('overwrite', False)
 
                     if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_evaluation:
 

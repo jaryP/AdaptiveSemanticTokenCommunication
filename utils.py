@@ -209,22 +209,23 @@ class CommunicationPipeline(nn.Module):
     def forward(self, x, snr=None):
         self.input = x
 
-        if not self.training:
-            mask = (x.sum(dim=-1, keepdim=True) != 0).float()
+        # if not self.training:
+        #     mask = (x.sum(dim=-1, keepdim=True) != 0).float()
+        #
+        #     x = self.encoder(x)
+        #
+        #     # if self.channel is not None:
+        #     x = self.channel(x * mask)
+        #
+        #     decoded = self.decoder(x) * mask
+        # else:
 
-            x = self.encoder(x)
+        x = self.encoder(x)
 
-            # if self.channel is not None:
-            x = self.channel(x * mask)
+        # if self.channel is not None:
+        x = self.channel(x)
 
-            decoded = self.decoder(x) * mask
-        else:
-            x = self.encoder(x)
-
-            # if self.channel is not None:
-            x = self.channel(x)
-
-            decoded = self.decoder(x)
+        decoded = self.decoder(x)
 
         self.output = decoded
         return decoded

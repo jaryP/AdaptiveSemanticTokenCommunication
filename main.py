@@ -498,10 +498,11 @@ def main(cfg: DictConfig):
 
                     encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=input_size)
 
-                    ins = encoder(blocks_before(x).cpu()).shape
                     if not use_cnn_ae:
+                        ins = encoder(blocks_before(x).cpu().flatten(2)).shape
                         ins = ins[-1]
                     else:
+                        ins = encoder(blocks_before(x).cpu()).shape
                         ins = ins[1:]
 
                     decoder = hydra.utils.instantiate(experiment_cfg.decoder, input_size=ins,
@@ -516,14 +517,13 @@ def main(cfg: DictConfig):
                                                                    decoder=decoder).to(
                         device)
 
-                    if blocks_after is not None:
-                        if not use_cnn_ae:
-
-                            comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten, *blocks_after)
-                        else:
-                            comm_model.features = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                    # if blocks_after is not None:
+                    if not use_cnn_ae:
+                        comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten, *blocks_after)
                     else:
-                        comm_model.features = nn.Sequential(*blocks_before, communication_pipeline)
+                        comm_model.features = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                    # else:
+                    #     comm_model.features = nn.Sequential(*blocks_before, communication_pipeline)
 
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)

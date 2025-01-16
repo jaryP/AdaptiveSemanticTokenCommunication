@@ -614,7 +614,10 @@ def main(cfg: DictConfig):
                     if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_evaluation:
 
                         with warnings.catch_warnings(action="ignore"):
-                            results = hydra.utils.instantiate(value, dataset=test_dataset, model=comm_model)
+                            results = hydra.utils.instantiate(value,
+                                                              dataset=test_dataset,
+                                                              model=comm_model,
+                                                              _convert_="partial")
 
                         print(results)
                         if results is not None:

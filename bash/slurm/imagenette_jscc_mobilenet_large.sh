@@ -12,9 +12,10 @@ sbatch <<EOT
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --job-name="6g_mobilenet_small"
-#SBATCH --out="./sout/6g_mobilenet_small.out"
+#SBATCH --job-name="6g_mobilenet_large"
+#SBATCH --out="./sout/6g_mobilenet_large.out"
 #SBATCH --open-mode=truncate
+
 
 echo "NODELIST="${SLURM_NODELIST}
 

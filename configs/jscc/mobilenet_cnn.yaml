@@ -1,5 +1,4 @@
 gaussian_no_training_3_cnn:
-  use_cnn_ae: Yes
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -9,27 +8,7 @@ gaussian_no_training_3_cnn:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
-    use_training_snr: No
     dims: [-2, -1]
-  encoder:
-    _target_: comm.pipeline.BaseRealToComplexNN
-    output_size: 0.5
-    n_layers: 3
-    normalize: Yes
-    drop_last_activation: Yes
-  decoder:
-    _target_: comm.pipeline.ConcatComplexToRealNN
-    n_layers: 3
-gaussian_no_training_3:
-  overwrite_evaluation: No
-  splitting_point: 3
-  unwrap_after: Yes
-  unwrap_before: No
-  epochs: 10
-  freeze_model: Yes
-  channel:
-    _target_: comm.channel.GaussianNoiseChannel
-    snr: [ -20, 20 ]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -40,7 +19,7 @@ gaussian_no_training_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_025_3:
+gaussian_no_training_025_3_cnn:
   splitting_point: 3
   overwrite_evaluation: No
   unwrap_after: Yes
@@ -50,6 +29,7 @@ gaussian_no_training_025_3:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -100, 100 ]
+    dims: [-2, -1]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -60,7 +40,7 @@ gaussian_no_training_025_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_01_3:
+gaussian_no_training_01_3_cnn:
   splitting_point: 3
   unwrap_after: Yes
   overwrite_evaluation: No
@@ -69,6 +49,7 @@ gaussian_no_training_01_3:
   freeze_model: Yes
   channel:
     _target_: comm.channel.GaussianNoiseChannel
+    dims: [-2, -1]
     snr: [ -100, 100 ]
     use_training_snr: No
   encoder:
@@ -80,7 +61,7 @@ gaussian_no_training_01_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_01_3_m20_p20:
+gaussian_noise_01_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -90,6 +71,7 @@ gaussian_noise_01_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -100,7 +82,7 @@ gaussian_noise_01_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_3_m20_p20:
+gaussian_noise_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -120,7 +102,7 @@ gaussian_noise_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_025_3_m20_p20:
+gaussian_noise_025_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -130,6 +112,7 @@ gaussian_noise_025_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20 , 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -140,7 +123,7 @@ gaussian_noise_025_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_0001_3_m20_p20:
+gaussian_noise_0001_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -150,6 +133,7 @@ gaussian_noise_0001_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20 , 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -160,7 +144,7 @@ gaussian_noise_0001_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_0001_3:
+gaussian_no_training_0001_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -170,6 +154,7 @@ gaussian_no_training_0001_3:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
+    dims: [-2, -1]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -180,7 +165,7 @@ gaussian_no_training_0001_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_005_3_m20_p20:
+gaussian_noise_005_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -190,6 +175,7 @@ gaussian_noise_005_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20 , 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -200,7 +186,7 @@ gaussian_noise_005_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_005_3:
+gaussian_no_training_005_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -210,6 +196,7 @@ gaussian_no_training_005_3:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
+    dims: [-2, -1]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -220,7 +207,7 @@ gaussian_no_training_005_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_001_3_m20_p20:
+gaussian_noise_001_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -230,6 +217,7 @@ gaussian_noise_001_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20 , 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -240,7 +228,7 @@ gaussian_noise_001_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_001_3:
+gaussian_no_training_001_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -250,6 +238,7 @@ gaussian_no_training_001_3:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
+    dims: [-2, -1]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -260,7 +249,7 @@ gaussian_no_training_001_3:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_noise_015_3_m20_p20:
+gaussian_noise_015_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -270,6 +259,7 @@ gaussian_noise_015_3_m20_p20:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20 , 20 ]
+    dims: [-2, -1]
     use_training_snr: Yes
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN
@@ -280,7 +270,7 @@ gaussian_noise_015_3_m20_p20:
   decoder:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
-gaussian_no_training_015_3:
+gaussian_no_training_015_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
   unwrap_after: Yes
@@ -290,6 +280,7 @@ gaussian_no_training_015_3:
   channel:
     _target_: comm.channel.GaussianNoiseChannel
     snr: [ -20, 20 ]
+    dims: [-2, -1]
     use_training_snr: No
   encoder:
     _target_: comm.pipeline.BaseRealToComplexNN

@@ -24,4 +24,3 @@ do
   srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal method.loss.inner_flops_type=l1 method.loss.inner_flops_w=0.5 final_evaluation=semantic device=0 hydra.run.dir=./results/testc
   rm -r ./results/testc
 done
-

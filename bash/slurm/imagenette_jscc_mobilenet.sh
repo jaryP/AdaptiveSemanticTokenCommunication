@@ -26,5 +26,6 @@ conda init
 #conda activate eep
 source activate eep
 
+srun python main.py training_pipeline=mobilenet_small_v3.yaml pretraining_pipeline=mobilenet.yaml model=mobilenet_v3_small.yaml +jscc=mobilenet_cnn.yaml final_evaluation=default comm_evaluation=default serialization.values_to_prepend=[jscc] device=0
 srun python main.py training_pipeline=mobilenet_small_v3.yaml pretraining_pipeline=mobilenet.yaml model=mobilenet_v3_small.yaml +jscc=mobilenet_small.yaml final_evaluation=default comm_evaluation=default serialization.values_to_prepend=[jscc] device=0
 EOT

@@ -477,22 +477,35 @@ def main(cfg: DictConfig):
                         comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
                 else:
 
+                    use_cnn_ae = experiment_cfg.get('use_cnn_ae', False)
                     blocks_before = comm_model.features[:splitting_point]
                     blocks_after = comm_model.features[splitting_point:]
 
                     oo = blocks_before(x)
-                    flatten_oo = torch.flatten(oo, 2)
                     print(oo.shape)
 
-                    flatten = nn.Flatten(start_dim=2)
-                    unflatten = nn.Unflatten(dim=-1, unflattened_size=oo.shape[2:])
+                    if not use_cnn_ae:
+                        flatten_oo = torch.flatten(oo, 2)
+                        input_size = flatten_oo.shape[-1]
+                        flatten = nn.Flatten(start_dim=2)
+                        unflatten = nn.Unflatten(dim=-1, unflattened_size=oo.shape[2:])
+
+                    else:
+                        input_size = oo.shape[1:]
 
                     comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
                     # os.makedirs(comm_model_path, exist_ok=True)
 
-                    encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=flatten_oo.shape[-1])
-                    decoder = hydra.utils.instantiate(experiment_cfg.decoder, input_size=encoder.output_size,
-                                                      output_size=flatten_oo.shape[-1])
+                    encoder = hydra.utils.instantiate(experiment_cfg.encoder, input_size=input_size)
+
+                    ins = encoder(blocks_before(x).cpu()).shape
+                    if not use_cnn_ae:
+                        ins = ins[-1]
+                    else:
+                        ins = ins[1:]
+
+                    decoder = hydra.utils.instantiate(experiment_cfg.decoder, input_size=ins,
+                                                      output_size=input_size)
 
                     channel = experiment_cfg.get('channel', None)
 
@@ -504,7 +517,11 @@ def main(cfg: DictConfig):
                         device)
 
                     if blocks_after is not None:
-                        comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten, *blocks_after)
+                        if not use_cnn_ae:
+
+                            comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten, *blocks_after)
+                        else:
+                            comm_model.features = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
                     else:
                         comm_model.features = nn.Sequential(*blocks_before, communication_pipeline)
 

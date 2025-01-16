@@ -3,6 +3,7 @@ gaussian_no_training_3_cnn:
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
+  use_cnn_ae: Yes
   epochs: 10
   freeze_model: Yes
   channel:
@@ -21,6 +22,7 @@ gaussian_no_training_3_cnn:
     n_layers: 3
 gaussian_no_training_025_3_cnn:
   splitting_point: 3
+  use_cnn_ae: Yes
   overwrite_evaluation: No
   unwrap_after: Yes
   unwrap_before: No
@@ -43,6 +45,7 @@ gaussian_no_training_025_3_cnn:
 gaussian_no_training_01_3_cnn:
   splitting_point: 3
   unwrap_after: Yes
+  use_cnn_ae: Yes
   overwrite_evaluation: No
   unwrap_before: No
   epochs: 10
@@ -63,6 +66,7 @@ gaussian_no_training_01_3_cnn:
     n_layers: 3
 gaussian_noise_01_3_cnn_m20_p20:
   overwrite_evaluation: No
+  use_cnn_ae: Yes
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -84,6 +88,7 @@ gaussian_noise_01_3_cnn_m20_p20:
     n_layers: 3
 gaussian_noise_3_cnn_m20_p20:
   overwrite_evaluation: No
+  use_cnn_ae: Yes
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -105,6 +110,7 @@ gaussian_noise_3_cnn_m20_p20:
 gaussian_noise_025_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -126,6 +132,7 @@ gaussian_noise_025_3_cnn_m20_p20:
 gaussian_noise_0001_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -147,6 +154,7 @@ gaussian_noise_0001_3_cnn_m20_p20:
 gaussian_no_training_0001_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -168,6 +176,7 @@ gaussian_no_training_0001_3_cnn:
 gaussian_noise_005_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -189,6 +198,7 @@ gaussian_noise_005_3_cnn_m20_p20:
 gaussian_no_training_005_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -210,6 +220,7 @@ gaussian_no_training_005_3_cnn:
 gaussian_noise_001_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -230,6 +241,7 @@ gaussian_noise_001_3_cnn_m20_p20:
     n_layers: 3
 gaussian_no_training_001_3_cnn:
   overwrite_evaluation: No
+  use_cnn_ae: Yes
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -252,6 +264,7 @@ gaussian_no_training_001_3_cnn:
 gaussian_noise_015_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -273,6 +286,7 @@ gaussian_noise_015_3_cnn_m20_p20:
 gaussian_no_training_015_3_cnn:
   overwrite_evaluation: No
   splitting_point: 3
+  use_cnn_ae: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10

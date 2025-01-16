@@ -511,7 +511,7 @@ def main(cfg: DictConfig):
                     channel = experiment_cfg.get('channel', None)
 
                     if channel is not None:
-                        channel = hydra.utils.instantiate(channel)
+                        channel = hydra.utils.instantiate(channel, _convert_='partial')
 
                     communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder,
                                                                    decoder=decoder).to(

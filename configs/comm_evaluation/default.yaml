@@ -6,3 +6,4 @@ semantic:
   function:
     _target_: methods.base.evaluation
     _partial_: Yes
+    _convert_: "partial"

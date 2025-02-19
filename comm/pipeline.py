@@ -140,12 +140,16 @@ class BaseRealToComplexNN(nn.Module):
         if self.sincos:
             a, b = torch.cos(a), torch.sin(b)
 
-        x = torch.complex(a, b)
+        new_x = torch.complex(a, b)
 
         if self.normalize:
-            x = x / torch.norm(x, 2, -1, keepdim=True)
+            new_x = new_x / torch.norm(new_x, 2, -1, keepdim=True)
 
-        return x
+        if len(x) > 0:
+            zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
+            new_x = new_x * zeros_mask
+
+        return new_x
 
 
 class ABSComplexToRealNN(nn.Module):
@@ -171,12 +175,16 @@ class ABSComplexToRealNN(nn.Module):
         if self.normalize:
             x = x / torch.norm(x, 2, -1, keepdim=True)
 
-        x = self.d_f(x.abs())
+        new_x = self.d_f(x.abs())
+
+        if len(x) > 0:
+            zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
+            new_x = new_x * zeros_mask
 
         if self.transpose:
-            x = x.permute(0, 2, 1)
+            new_x = new_x.permute(0, 2, 1)
 
-        return x
+        return new_x
 
 
 class ConcatComplexToRealNN(nn.Module):
@@ -215,13 +223,17 @@ class ConcatComplexToRealNN(nn.Module):
         if self.normalize:
             x = x / torch.norm(x, 2, -1, keepdim=True)
 
-        x = torch.cat((x.real, x.imag), self.cdim)
-        x = self.d_f(x)
+        new_x = torch.cat((x.real, x.imag), self.cdim)
+        new_x = self.d_f(new_x)
+
+        if len(x) > 0:
+            zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
+            new_x = new_x * zeros_mask
 
         if self.transpose:
-            x = x.permute(0, 2, 1)
+            new_x = new_x.permute(0, 2, 1)
 
-        return x
+        return new_x
 
 
 if __name__ == '__main__':

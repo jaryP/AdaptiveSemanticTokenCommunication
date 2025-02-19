@@ -82,6 +82,7 @@ class GaussianNoiseChannel(CleanChannel):
 
         self.dims = dims
         self.symbols = None
+        self.channel_input = None
 
     def get_snr(self, size: int, device: Union[str, torch.device] = 'cpu'):
         if self.training:
@@ -122,6 +123,8 @@ class GaussianNoiseChannel(CleanChannel):
     def forward(self, x: torch.Tensor, snr=None, **kwargs):
 
         self.symbols = x.shape
+        self.channel_input = x
+
         if self.training and not self.use_training_snr:
             return x
 

@@ -78,7 +78,7 @@ class AdaptiveBlock(nn.Module):
         return x, mask
 
 
-class SemanticVit(VisionTransformer):
+class SemanticVit(nn.Module):
     def __init__(self,
                  model: VisionTransformer,
                  use_budget_emb=False,

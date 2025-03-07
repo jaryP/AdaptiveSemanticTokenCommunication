@@ -1,5 +1,6 @@
 gaussian_no_training_3_cnn:
   overwrite_evaluation: No
+  opt_index: 2
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -22,6 +23,7 @@ gaussian_no_training_3_cnn:
     n_layers: 3
 gaussian_no_training_025_3_cnn:
   splitting_point: 3
+  opt_index: 2
   use_cnn_ae: Yes
   overwrite_evaluation: No
   unwrap_after: Yes
@@ -44,6 +46,7 @@ gaussian_no_training_025_3_cnn:
     n_layers: 3
 gaussian_no_training_01_3_cnn:
   splitting_point: 3
+  opt_index: 2
   unwrap_after: Yes
   use_cnn_ae: Yes
   overwrite_evaluation: No
@@ -65,7 +68,9 @@ gaussian_no_training_01_3_cnn:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
 gaussian_noise_01_3_cnn_m20_p20:
+  use_for_opt_problem: Yes
   overwrite_evaluation: No
+  opt_index: 1
   use_cnn_ae: Yes
   splitting_point: 3
   unwrap_after: Yes
@@ -88,6 +93,8 @@ gaussian_noise_01_3_cnn_m20_p20:
     n_layers: 3
 gaussian_noise_3_cnn_m20_p20:
   overwrite_evaluation: No
+  opt_index: 1
+  use_for_opt_problem: Yes
   use_cnn_ae: Yes
   splitting_point: 3
   unwrap_after: Yes
@@ -110,7 +117,9 @@ gaussian_noise_3_cnn_m20_p20:
 gaussian_noise_025_3_cnn_m20_p20:
   overwrite_evaluation: No
   splitting_point: 3
+  opt_index: 1
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -131,8 +140,10 @@ gaussian_noise_025_3_cnn_m20_p20:
     n_layers: 3
 gaussian_noise_0001_3_cnn_m20_p20:
   overwrite_evaluation: No
+  opt_index: 1
   splitting_point: 3
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -153,6 +164,7 @@ gaussian_noise_0001_3_cnn_m20_p20:
     n_layers: 3
 gaussian_no_training_0001_3_cnn:
   overwrite_evaluation: No
+  opt_index: 2
   splitting_point: 3
   use_cnn_ae: Yes
   unwrap_after: Yes
@@ -175,8 +187,10 @@ gaussian_no_training_0001_3_cnn:
     n_layers: 3
 gaussian_noise_005_3_cnn_m20_p20:
   overwrite_evaluation: No
+  opt_index: 1
   splitting_point: 3
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -196,6 +210,7 @@ gaussian_noise_005_3_cnn_m20_p20:
     _target_: comm.pipeline.ConcatComplexToRealNN
     n_layers: 3
 gaussian_no_training_005_3_cnn:
+  opt_index: 2
   overwrite_evaluation: No
   splitting_point: 3
   use_cnn_ae: Yes
@@ -219,8 +234,10 @@ gaussian_no_training_005_3_cnn:
     n_layers: 3
 gaussian_noise_001_3_cnn_m20_p20:
   overwrite_evaluation: No
+  opt_index: 1
   splitting_point: 3
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -241,7 +258,9 @@ gaussian_noise_001_3_cnn_m20_p20:
     n_layers: 3
 gaussian_no_training_001_3_cnn:
   overwrite_evaluation: No
+  opt_index: 2
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   splitting_point: 3
   unwrap_after: Yes
   unwrap_before: No
@@ -263,8 +282,10 @@ gaussian_no_training_001_3_cnn:
     n_layers: 3
 gaussian_noise_015_3_cnn_m20_p20:
   overwrite_evaluation: No
+  opt_index: 1
   splitting_point: 3
   use_cnn_ae: Yes
+  use_for_opt_problem: Yes
   unwrap_after: Yes
   unwrap_before: No
   epochs: 10
@@ -285,6 +306,7 @@ gaussian_noise_015_3_cnn_m20_p20:
     n_layers: 3
 gaussian_no_training_015_3_cnn:
   overwrite_evaluation: No
+  opt_index: 2
   splitting_point: 3
   use_cnn_ae: Yes
   unwrap_after: Yes

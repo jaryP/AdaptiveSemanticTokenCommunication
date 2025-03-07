@@ -145,9 +145,9 @@ class BaseRealToComplexNN(nn.Module):
         if self.normalize:
             new_x = new_x / torch.norm(new_x, 2, -1, keepdim=True)
 
-        if len(x) > 0:
-            zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
-            new_x = new_x * zeros_mask
+        # if len(x) > 0:
+        #     zeros_mask = (x != 0).all(-1, keepdims=True).float()
+        #     new_x = new_x * zeros_mask
 
         return new_x
 
@@ -177,9 +177,9 @@ class ABSComplexToRealNN(nn.Module):
 
         new_x = self.d_f(x.abs())
 
-        if len(x) > 0:
-            zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
-            new_x = new_x * zeros_mask
+        # if len(x) > 1:
+        #     zeros_mask = (x != 0).all(-1, keepdims=True).float()
+        #     new_x = new_x * zeros_mask
 
         if self.transpose:
             new_x = new_x.permute(0, 2, 1)
@@ -226,7 +226,7 @@ class ConcatComplexToRealNN(nn.Module):
         new_x = torch.cat((x.real, x.imag), self.cdim)
         new_x = self.d_f(new_x)
 
-        if len(x) > 0:
+        if len(x) > 1:
             zeros_mask = (x.sum(-1, keepdims=True) != 0).float()
             new_x = new_x * zeros_mask
 
@@ -236,8 +236,3 @@ class ConcatComplexToRealNN(nn.Module):
         return new_x
 
 
-if __name__ == '__main__':
-    _, (encoder, decoder) = get_cnn_layers((24, 32, 32), n_layers=3, output_size=0.5)
-    x = torch.rand(1, 24, 32, 32)
-    print(encoder(x).shape)
-    print(decoder(encoder(x)).shape)

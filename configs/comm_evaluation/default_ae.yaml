@@ -1,0 +1,19 @@
+semantic:
+  _target_: comm.evaluation.gaussian_snr_evaluation
+  snr:
+    _target_: builtins.range
+    _args_: [-50, 50, 5]
+  function:
+    _target_: methods.base.evaluation
+    _partial_: Yes
+    _convert_: "partial"
+activations:
+  use_pickle: yes
+  _target_: comm.evaluation.gaussian_snr_activations
+  snr:
+    _target_: builtins.range
+    _args_: [-20, 20, 10]
+  function:
+    _target_: methods.base.evaluation
+    _partial_: Yes
+    _convert_: "partial"

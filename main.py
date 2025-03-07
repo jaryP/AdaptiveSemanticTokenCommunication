@@ -1,11 +1,15 @@
+import collections
 import json
 import logging
 import os
+import pickle
 import random
 import warnings
 from collections import defaultdict
 from copy import deepcopy
 from itertools import chain
+from ast import literal_eval
+from typing import Sequence
 
 import hydra
 
@@ -20,8 +24,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from comm.channel import GaussianNoiseChannel
-from comm.evaluation import digital_jpeg, digital_resize, analog_resize
+from comm.evaluation import digital_jpeg, digital_resize, analog_resize, gaussian_snr_activations
 from methods import SemanticVit
+from methods.base import evaluation
 from methods.proposal import AdaptiveBlock, semantic_evaluation
 from serialization import get_hash, get_path
 from utils import get_pretrained_model, CommunicationPipeline
@@ -89,10 +94,12 @@ def main(cfg: DictConfig):
         wadb_id_path = os.path.join(experiment_path, 'wandbid.pkl')
         plot_path = os.path.join(experiment_path, 'evaluation_results')
         evaluation_results = os.path.join(experiment_path, 'evaluation_results')
+        opt_results_path = os.path.join(experiment_path, 'opt_results')
 
         os.makedirs(experiment_path, exist_ok=True)
         os.makedirs(plot_path, exist_ok=True)
         os.makedirs(evaluation_results, exist_ok=True)
+        os.makedirs(opt_results_path, exist_ok=True)
 
         datalaoder_wrapper = hydra.utils.instantiate(
             cfg.training_pipeline.dataloader, _partial_=True)
@@ -328,12 +335,16 @@ def main(cfg: DictConfig):
 
         if cfg.get('jscc', None) is not None:
 
-            average_results = defaultdict(lambda: defaultdict(dict))
-            models = {}
+            average_results = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+            models = defaultdict(dict)
 
             for experiment_key, experiment_cfg in cfg['jscc'].items():
                 compression = experiment_cfg.encoder.output_size
                 use_for_opt_problem = experiment_cfg.get('use_for_opt_problem', False)
+                opt_index = experiment_cfg.get('opt_index', None)
+                # assert opt_index is not None, experiment_cfg
+
+                # opt_index = opt_index if isinstance(opt_index, Sequence) else [opt_index]
 
                 log.info(f'Comm experiment called {experiment_key}')
 
@@ -343,8 +354,6 @@ def main(cfg: DictConfig):
                 splitting_point = experiment_cfg.splitting_point
 
                 comm_model = deepcopy(model)
-
-                # log.info(dict(comm_model.named_parameters()).keys())
 
                 if isinstance(model, (VisionTransformer, SemanticVit)):
 
@@ -373,99 +382,6 @@ def main(cfg: DictConfig):
                                 if hasattr(b, 'base_block'):
                                     comm_model.blocks[i] = b.base_block
 
-                    fine_tuning_cfg = experiment_cfg.get('fine_tuning', None)
-
-                    # if fine_tuning_cfg is not None:
-                    #     if os.path.exists(os.path.join(experiment_path, 'fine_tuned_model.pt')):
-                    #         model_dict = torch.load(os.path.join(experiment_path, 'fine_tuned_model.pt'),
-                    #                                 map_location=device)
-                    #         log.info(model_dict.keys())
-                    #
-                    #         comm_model.load_state_dict(model_dict)
-                    #         log.info(f'Fine tuned model loaded')
-                    #     else:
-                    #         gradient_clipping_value = cfg.training_pipeline.schema.get('gradient_clipping_value', None)
-                    #
-                    #         loss_f = hydra.utils.instantiate(cfg.method.loss, model=comm_model)
-                    #
-                    #         optimizer = hydra.utils.instantiate(cfg.training_pipeline.optimizer,
-                    #                                             params=comm_model.parameters())
-                    #
-                    #         scheduler = None
-                    #         if 'scheduler' in cfg:
-                    #             scheduler = hydra.utils.instantiate(cfg.training_pipeline.scheduler,
-                    #                                                 optimizer=optimizer)
-                    #
-                    #         bar = tqdm.tqdm(range(experiment_cfg.epochs),
-                    #                         leave=False, desc='Fine tuning the model')
-                    #         epoch_losses = []
-                    #
-                    #         score = -1
-                    #
-                    #         for epoch in bar:
-                    #             comm_model.train()
-                    #             for x, y in train_dataloader:
-                    #                 x, y = x.to(device), y.to(device)
-                    #
-                    #                 pred = comm_model(x)
-                    #                 loss = loss_f(pred, y)
-                    #
-                    #                 epoch_losses.append(loss.item())
-                    #
-                    #                 optimizer.zero_grad()
-                    #                 loss.backward()
-                    #
-                    #                 if gradient_clipping_value is not None:
-                    #                     torch.nn.utils.clip_grad_norm_(comm_model.parameters(), gradient_clipping_value)
-                    #
-                    #                 optimizer.step()
-                    #
-                    #             if scheduler is not None:
-                    #                 scheduler.step()
-                    #
-                    #             log.info(f'Training epoch {epoch} ended')
-                    #
-                    #             with torch.no_grad():
-                    #                 comm_model.eval()
-                    #
-                    #                 if (epoch + 1) % 5 == 0:
-                    #                     for a in [0.1, 0.2, 0.3, 0.5, 0.6, 0.8]:
-                    #
-                    #                         c, t = 0, 0
-                    #                         average_dropping = defaultdict(float)
-                    #
-                    #                         for x, y in DataLoader(test_dataset, batch_size=1):
-                    #                             x, y = x.to(device), y.to(device)
-                    #
-                    #                             pred = comm_model(x, alpha=a)
-                    #
-                    #                             c += (pred.argmax(-1) == y).sum().item()
-                    #                             t += len(x)
-                    #
-                    #                             for i, b in enumerate(
-                    #                                     [b for b in comm_model.blocks if isinstance(b, AdaptiveBlock) if
-                    #                                      b.last_mask is not None]):
-                    #                                 average_dropping[i] += b.last_mask.shape[1]
-                    #
-                    #                         log.info(f'Model budget {a} has scores: {c}, {t}, ({c / t})')
-                    #                         v = {k: v / t for k, v in average_dropping.items()}
-                    #                         log.info(f'Model budget {a} has average scoring: {v}')
-                    #                 else:
-                    #                     t, c = 0, 0
-                    #
-                    #                     for x, y in test_dataloader:
-                    #                         x, y = x.to(device), y.to(device)
-                    #
-                    #                         pred = comm_model(x)
-                    #                         c += (pred.argmax(-1) == y).sum().item()
-                    #                         t += len(x)
-                    #
-                    #                     score = c / t
-                    #
-                    #             bar.set_postfix({'Test acc': score, 'Epoch loss': np.mean(epoch_losses)})
-                    #
-                    #         torch.save(comm_model.state_dict(), os.path.join(experiment_path, 'fine_tuned_model.pt'))
-
                     comm_model_path = os.path.join(comm_experiment_path, 'comm_model.pt')
                     # os.makedirs(comm_model_path, exist_ok=True)
 
@@ -478,13 +394,15 @@ def main(cfg: DictConfig):
                     if channel is not None:
                         channel = hydra.utils.instantiate(channel)
 
-                    communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder, decoder=decoder).to(
+                    communication_pipeline = CommunicationPipeline(channel=channel, encoder=encoder,
+                                                                   decoder=decoder).to(
                         device)
 
                     if isinstance(model, SemanticVit):
 
                         if blocks_after is not None:
-                            comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
+                            comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline,
+                                                                     *blocks_after)
                         else:
                             comm_model._model.blocks = nn.Sequential(*blocks_before, communication_pipeline)
                     else:
@@ -499,7 +417,6 @@ def main(cfg: DictConfig):
                     blocks_after = comm_model.features[splitting_point:]
 
                     oo = blocks_before(x)
-                    print(oo.shape)
 
                     if not use_cnn_ae:
                         flatten_oo = torch.flatten(oo, 2)
@@ -536,11 +453,14 @@ def main(cfg: DictConfig):
 
                     # if blocks_after is not None:
                     if not use_cnn_ae:
-                        comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten, *blocks_after)
+                        comm_model.features = nn.Sequential(*blocks_before, flatten, communication_pipeline, unflatten,
+                                                            *blocks_after)
                     else:
                         comm_model.features = nn.Sequential(*blocks_before, communication_pipeline, *blocks_after)
                     # else:
                     #     comm_model.features = nn.Sequential(*blocks_before, communication_pipeline)
+
+                # gaussian_snr_activations(comm_model, test_dataset, 10, evaluation)
 
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
@@ -620,8 +540,13 @@ def main(cfg: DictConfig):
 
                     torch.save(comm_model.state_dict(), comm_model_path)
 
-                if use_for_opt_problem:
-                    models[str(compression)] = deepcopy(comm_model).eval().cpu()
+                # if use_for_opt_problem:
+                #     # models[str(compression)] = deepcopy(comm_model).eval().cpu()
+                #     models[str(compression)] = deepcopy(comm_model).eval()
+
+                if opt_index is not None:
+                # for opt_i in opt_index if isinstance(opt_index, Sequence) else [opt_index]:
+                    models[opt_index][str(compression)] = deepcopy(comm_model.cpu()).eval()
 
                 final_evaluation = cfg.get('comm_evaluation', {})
                 if final_evaluation is None:
@@ -632,157 +557,313 @@ def main(cfg: DictConfig):
                 keys_to_use = []
 
                 for key, value in final_evaluation.items():
+                    pkl = value.get('use_pickle', False)
+                    if pkl:
+                        current_path = os.path.join(comm_experiment_path, f'{key}.pkl')
+                    else:
+                        current_path = os.path.join(comm_experiment_path, f'{key}.json')
 
-                    if not os.path.exists(os.path.join(comm_experiment_path, f'{key}.json')) or overwrite_evaluation:
-
+                    if not os.path.exists(current_path) or overwrite_evaluation:
                         with warnings.catch_warnings(action="ignore"):
                             results = hydra.utils.instantiate(value,
                                                               dataset=test_dataset,
                                                               model=comm_model,
                                                               _convert_="partial")
 
-                        print(results)
                         if results is not None:
-                            with open(os.path.join(comm_experiment_path, f'{key}.json'), 'w') as f:
-                                json.dump(results, f, ensure_ascii=True, indent=4, cls=NpEncoder)
+                            if not pkl:
+                                with open(current_path, 'w') as f:
+                                    json.dump(results, f, ensure_ascii=True, indent=4, cls=NpEncoder)
+                            else:
+                                with open(current_path, 'wb') as f:
+                                    pickle.dump(results, f)
 
                         log.info(f'{key} evaluation ended')
 
-                    else:
+                    if opt_index is not None and key == 'semantic':
                         with open(os.path.join(comm_experiment_path, f'{key}.json'), 'r') as f:
                             results = json.load(f)
 
-                    if use_for_opt_problem:
                         if '0' in results and len(results) <= 5:
                             results = results['0']
 
                         for snr, vals in results.items():
                             snr = snr
                             accuracy = vals['accuracy']
-                            sizes = vals['all_sizes']
 
-                            xs = []
-                            ys = []
+                            if 'all_sizes' in vals:
+                                sizes = vals['all_sizes']
+                                for k in accuracy.keys():
+                                    acc = accuracy[k]
+                                    size = list(sizes[k].values())[-1][0] * (192 * compression)
 
-                            for k in accuracy.keys():
-                                acc = accuracy[k]
-                                size = list(sizes[k].values())[-1][0] * (192 * compression)
-                                xs.append((size) / (224 * 224 * 3))
-                                ys.append(acc)
+                                    _results = []
+                                    # for opt_i in opt_index:
+                                    average_results[opt_index][snr][k][compression] = {'accuracy': acc, 'kn': size / (224 * 224 * 3)}
+                            else:
+                                # for opt_i in opt_index:
+                                average_results[opt_index][snr][compression] = {'accuracy': accuracy, 'kn': vals['symbols'] / (224 * 224 * 3)}
 
-                                average_results[snr][k][compression] = {'accuracy': acc, 'kn': size / (224 * 224 * 3)}
+                                    # _results.append({'accuracy': acc, 'kn': size / (224 * 224 * 3)})
+                                    #
+                                    # average_results[opt_i][snr][compression] = {'accuracy': accuracy,
+                                    #                                             'kn': vals['symbols'] / (224 * 224 * 3)}
+                            # for opt_i in opt_index:
+                            #     average_results[opt_index][snr][compression] = _results
 
             # MINIMIZATION PROBLEM
-
-            # models.eval()
 
             def z_f(t, zetas, gammas, gamma_avg, mu):
                 if t == 0:
                     return 0
 
-                return max(0, zetas[t-1] + mu * (gammas[t-1] - gamma_avg))
+                return max(0, zetas[t - 1] + mu * (gammas[t - 1] - gamma_avg))
 
             def get_mapping(snr, results):
+                def flatten(dictionary, parent_key='', separator='_'):
+
+                    items = []
+                    for key, value in dictionary.items():
+                        new_key = str(parent_key) + separator + str(key) if parent_key else key
+                        if isinstance(value, collections.abc.MutableMapping):
+                            if len(value) == 2 and 'accuracy' in value and 'kn' in value:
+                                items.append((new_key, value))
+                            else:
+                                items.extend(flatten(value, new_key, separator).items())
+                        elif isinstance(value, list):
+                            for k, v in enumerate(value):
+                                items.extend(flatten(v, f'{k}_{new_key}').items())
+                        else:
+                            items.append((new_key, value))
+                    return dict(items)
+
                 closest_snr = min(results.keys(), key=lambda x: abs(float(x) - snr))
 
                 kns = []
 
-                for alpha, va in results[closest_snr].items():
-                    for c, vc in va.items():
-                        kns.append((alpha, c, vc['kn'], vc['accuracy']))
+                for k, v in flatten(results[closest_snr]).items():
+                    kns.append((k, v['kn'], v['accuracy']))
+
+                # for alpha, va in results[closest_snr].items():
+                #     for c, vc in va.items():
+                #         kns.append((alpha, c, vc['kn'], vc['accuracy']))
 
                 return kns
 
-            best_values = defaultdict(list)
+            opt_cfg = {
+                '20_0': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.05, 0.005, 0.0025, 0.001, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 20,
+                    'snr_sigma': 0
+                },
+                '10_2.5': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 10,
+                    'snr_sigma': 2.5
+                },
+                '20_2.5': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 20,
+                    'snr_sigma': 2.5
+                },
+                '0_2.5': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 0,
+                    'snr_sigma': 2.5
+                },
+                '10_0': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 10,
+                    'snr_sigma': 0
+                },
+                '0_7.5': {
+                    'v': [1, 10, 100, 1000, 10000, 100000],
+                    'mu': [1, 10, 100],
+                    'kn': [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1],
+                    'T': 10000,
+                    'snr_mu': 0,
+                    'snr_sigma': 7.5
+                },
+            }
 
-            snr_f = lambda: 1 * np.random.normal(10, 2.5, 1)[0]
+            for opt_index, collated_results in average_results.items():
+                for opt_name, vals in opt_cfg.items():
+                    log.info(f'Optimization {opt_name} (index {opt_index}) started.')
 
-            Vs = [1, 10, 100, 1000, 10000, 100000]
-            Ms = [1, 10, 100]
-            KNs = [0.005, 0.0025, 0.001, 0.02, 0.05, 0.02, 0.01, 0.1]
-            T = 10000
+                    # opt_index == 1 is for compatibility with past results. TO BE REMOVED WHEN PUBLISHED
 
-            for kn in KNs:
-                for V in Vs:
-                    for mu in Ms:
-                        acc = []
+                    opt_file_name = f'{opt_name}.json' if opt_index == 1 else f'{opt_name}_{opt_index}.json'
+                    opt_offline_file_name = f'offline_{opt_file_name}'
 
-                        gamma_s = []
-                        zeta_s = []
+                    opt_path = os.path.join(opt_results_path, opt_file_name)
+                    opt_offline_path = os.path.join(opt_results_path, opt_offline_file_name)
 
-                        for i in range(T):
-                            snr = snr_f()
-                            z = z_f(i, mu=mu, gamma_avg=kn, gammas=gamma_s, zetas=zeta_s)
+                    snr_f = lambda: 1 * np.random.normal(vals['snr_mu'], vals['snr_sigma'], 1)[0]
 
-                            mapping = get_mapping(snr, results=average_results)
-                            # gamma_star = (np.inf, None, None, None)
+                    Vs = vals['v']
+                    Ms = vals['mu']
+                    KNs = vals['kn']
+                    T = vals['T']
 
-                            min_ac = np.argmin([-V * accuracy + z * kn for alpha, c, kn, accuracy in mapping])
-                            alpha, c, kn, accuracy = mapping[min_ac]
+                    opt_results = {}
+                    if os.path.exists(opt_path):
+                        with open(opt_path, 'r') as f:
+                            try:
+                                opt_results = json.load(f)
+                            except json.decoder.JSONDecodeError:
+                                log.info(f'Error loading file: {opt_path}')
 
-                            # acc.append(accuracy)
+                    for kn in KNs:
+                        for V in Vs:
+                            for mu in Ms:
+                                if str((kn, V, mu)) in opt_results:
+                                    continue
 
-                            # gamma_s.append(kn)
-                            zeta_s.append(z)
+                                acc = []
 
-                            with torch.no_grad():
-                                x, y = next(iter(DataLoader(test_dataset, shuffle=True, batch_size=128)))
+                                gamma_s = []
+                                zeta_s = []
 
-                                model = models[str(c)].eval()
+                                for i in tqdm.tqdm(range(T), leave=False):
+                                    snr = snr_f()
+                                    z = z_f(i, mu=mu, gamma_avg=kn, gammas=gamma_s, zetas=zeta_s)
 
-                                modules = [m for m in model.modules() if isinstance(m, GaussianNoiseChannel)][0]
+                                    mapping = get_mapping(snr, results=collated_results)
 
-                                pred = model(x, alpha=float(alpha))
-                                acc.append((pred.argmax(-1) == y).sum().item())
+                                    min_ac = np.argmin([-V * accuracy + z * kn for _, kn, accuracy in mapping])
+                                    _, kn_s, accuracy = mapping[min_ac]
 
-                                if len(x) > 1:
-                                    real_gamma = (modules.channel_input.sum(-1, keepdims=True) != 0).float().mean().item() * np.prod(modules.channel_input.shape[1:])
-                                    real_gamma = real_gamma / (224 * 224 * 3)
-                                else:
-                                    real_gamma = np.prod(modules.symbols) / (224 * 224 * 3)
+                                    # print(kn, V, mu, alpha, c, kn_s)
+                                    acc.append(accuracy)
 
-                                gamma_s.append(real_gamma)
+                                    gamma_s.append(kn_s)
+                                    zeta_s.append(z)
 
-                            # gamma_star = mapping[-2]
+                                opt_results[str((kn, V, mu))] = {'gamma': gamma_s, 'accuracy': acc, 'zeta': zeta_s}
 
-                            # for a in np.linspace(1e-3, 1, num=25):
-                            #     for c in np.linspace(1e-3, 0.5, num=25):
-                            #         kn = (a * c * 192) / (224 * 224 * 3)
-                            #         # kn = (a * c) / (8)
-                            #         min_ac = np.argmin([-V * accuracy + z * kn for alpha, c, _, accuracy in mapping])
-                            #         for alpha, c, _kn, accuracy in mapping:
-                            #             current_f = -V * accuracy + z * kn
-                            #
-                            #             if current_f < gamma_star[0]:
-                            #                 gamma_star = (current_f, alpha, c, _kn, accuracy)
+                                with open(opt_path, 'w') as f:
+                                    json.dump(opt_results, f, cls=NpEncoder)
 
-                            # gamma = gamma_star[-2]
+                                # print(opt_index, opt_name, 'Gamma', np.mean(gamma_s[-1000:]), kn, V, mu)
+                                # print('Accuracy', np.mean(acc[-1000:]), (
+                                #         (np.asarray(gamma_s)[-100 + 1:] - np.asarray(gamma_s)[-100:-1]) / np.asarray(
+                                #     gamma_s)[-100 + 1:]).mean())
 
-                            # patterns[(gamma_star, snr)] = star[-1]
+                    best_values = defaultdict(list)
 
-                        print('Gamma', np.mean(gamma_s[-1000:]), kn)
-                        print('Accuracy', np.mean(acc[-1000:]))
+                    for key, value in opt_results.items():
+                        kn, V, mu = literal_eval(key)
 
-                        fig, ax = plt.subplots(1, 1)
-                        plt.plot(range(len(zeta_s)), zeta_s)
-                        plt.show()
+                        gammas = value['gamma']
+                        zetas = value['zeta']
 
-                        # plt.savefig(os.path.join('./opti_plots', f'min_{kn}_{V}_{mu}.png'), bbox_inches='tight')
-                        plt.close(fig)
+                        if np.mean(gammas[-1000:]) < kn:
+                            best_values[kn].append((np.mean(value['accuracy'][-1000:]), key))
 
-                        fig, ax = plt.subplots(1, 1)
-                        plt.plot(range(len(acc)), acc)
-                        plt.show()
-                        # plt.savefig(os.path.join('./opti_plots', f'acc_{kn}_{V}_{mu}.png'), bbox_inches='tight')
-                        plt.close(fig)
+                    keys = sorted(best_values.keys())
 
-                        if np.mean(np.mean(gamma_s[-1000:])) < kn:
-                            best_values[kn].append((V, mu, np.mean(acc[-1000:])))
+                    offline_results = {}
+                    if os.path.exists(opt_offline_path):
+                        with open(opt_offline_path, 'r') as f:
+                            offline_results = json.load(f)
 
-            keys = sorted(best_values.keys())
-            for k in keys:
-                mx = max(best_values[k], key=lambda x: x[0])
-                print(k, mx)
+                    for k in keys:
+                        mx = max(best_values[k], key=lambda x: literal_eval(x[1])[1])
+                        # mx = max(best_values[k], key=lambda x: x[0])
+                        if mx[1] in offline_results:
+                            continue
+
+                        kn, V, mu = literal_eval(mx[1])
+
+                        gammas = opt_results[mx[1]]['gamma']
+                        zetas = opt_results[mx[1]]['zeta']
+
+                        with torch.no_grad():
+                            ccs, gs, dcs = [], [], []
+
+                            for n in range(3 if vals['snr_sigma'] > 0 else 1):
+                                gamma_s = deepcopy(gammas)
+                                zeta_s = deepcopy(zetas)
+
+                                c, t, dc = 0, 0, 0
+                                g = []
+
+                                for x, y in tqdm.tqdm(DataLoader(test_dataset, shuffle=True, batch_size=1),
+                                                      leave=False):
+                                    alpha = None
+                                    snr = snr_f()
+                                    z = z_f(len(gamma_s), mu=mu, gamma_avg=kn, gammas=gamma_s, zetas=zeta_s)
+
+                                    mapping = get_mapping(snr, results=collated_results)
+
+                                    min_ac = np.argmin([-V * accuracy + z * _kn for _, _kn, accuracy in mapping])
+                                    kkk, _, _ = mapping[min_ac]
+
+                                    if isinstance(kkk, str):
+                                        kkk = tuple(map(float, kkk.split('_')))
+                                        if len(kkk) == 1:
+                                            compression = kkk[0]
+                                        elif len(kkk) == 2:
+                                            alpha, compression = kkk
+                                        else:
+                                            assert False
+                                    else:
+                                        compression = kkk
+
+                                    sample_model = models[opt_index][str(compression)].eval()
+                                    x = x.to(next(sample_model.parameters()).device)
+                                    y = y.to(next(sample_model.parameters()).device)
+
+                                    channel = [m for m in sample_model.modules()
+                                               if isinstance(m, GaussianNoiseChannel)][0]
+                                    channel.test_snr = snr
+
+                                    if alpha is None:
+                                        pred = sample_model(x)
+                                    else:
+                                        pred = sample_model(x, alpha=alpha)
+
+                                    _g = np.prod(channel.symbols) / (224 * 224 * 3)
+                                    g.append(_g)
+
+                                    classification = (pred.argmax(-1) == y).sum().item()
+
+                                    c += classification
+                                    dc += classification * (_g <= kn)
+
+                                    t += len(x)
+
+                                    gamma_s.append(_g)
+                                    zeta_s.append(z)
+
+                                ccs.append(c / t)
+
+                                dcs.append(dc / t)
+                                gs.append(np.mean(g))
+
+                            print(opt_name, k, np.mean(gs), np.mean(ccs))
+
+                        offline_results[mx[1]] = {'accuracy': ccs,
+                                                  'constrained_accuracy': dcs,
+                                                  'gamma': gs}
+
+                    with open(opt_offline_path, 'w') as f:
+                        json.dump(offline_results, f, cls=NpEncoder)
 
 
 if __name__ == "__main__":

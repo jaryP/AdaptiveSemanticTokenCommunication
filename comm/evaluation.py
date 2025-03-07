@@ -1,7 +1,7 @@
 import math
 from copy import deepcopy
 from io import BytesIO
-from typing import Sequence
+from typing import Sequence, Callable
 import logging
 
 import numpy as np
@@ -14,6 +14,7 @@ import tqdm.auto as tqdm
 
 from comm.channel import GaussianNoiseChannel
 from methods.proposal import SemanticVit
+from utils import CommunicationPipeline
 
 
 @torch.no_grad()
@@ -46,6 +47,63 @@ def gaussian_snr_evaluation(model: SemanticVit,
             print(_results[_snr])
 
         results[n] = _results
+
+    return results
+
+
+@torch.no_grad()
+def gaussian_snr_activations(model: SemanticVit,
+                             dataset,
+                             snr,
+                             function: Callable,
+                             monte_carlo_n=1,
+                             **kwargs):
+    class ForwardHookManager:
+        def __init__(self):
+            self._activations = []
+
+        def __call__(self, module, args, output):
+            self._activations.append(output.detach().cpu().numpy())
+
+        def get_activations(self):
+            return np.concatenate(self._activations)
+
+    if function is None:
+        function = lambda *x: x
+
+    model.eval()
+
+    comm_pipeline = [(i, m) for i, m in enumerate(model.blocks) if isinstance(m, CommunicationPipeline)][0]
+    device, server = model.blocks[comm_pipeline[0]-1], model.blocks[comm_pipeline[0]+1]
+
+    channel = comm_pipeline[1].channel
+
+    if not isinstance(snr, Sequence):
+        snr = [snr]
+
+    results = {}
+
+    # for n in tqdm.tqdm(range(monte_carlo_n), leave=False):
+    #     _results = {}
+    for _snr in tqdm.tqdm(snr, leave=False):
+        device_hook = ForwardHookManager()
+        server_hook = ForwardHookManager()
+        device_handle = device.register_forward_hook(device_hook)
+        server_handle = server.register_forward_hook(server_hook)
+
+        channel.test_snr = _snr
+        rrr = function(model=model, dataset=dataset, return_predictions=True, **kwargs)
+
+        # print(results[_snr])
+
+        results[_snr] = {'device': device_hook.get_activations(),
+                         'server': server_hook.get_activations()}
+
+        if 'predictions' in rrr:
+            results[_snr]['labels'] = rrr['predictions'][1]
+
+        device_handle.remove()
+        server_handle.remove()
 
     return results
 

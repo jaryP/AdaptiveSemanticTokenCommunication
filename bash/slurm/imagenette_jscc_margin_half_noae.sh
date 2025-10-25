@@ -37,4 +37,4 @@ source activate split_learning || {
 
 
 srun python main.py training_pipeline=imagenette224_vit16 pretraining_pipeline=imagenette224 model=deit_tiny_patch16_224 method=proposal +jscc=proposal_half_noae method.loss.inner_flops_type=margin method.loss.inner_flops_w=${1}  method.loss.output_flops_w=${2}  final_evaluation=semantic +method.model.blocks_to_transform=3 comm_evaluation=semantic serialization.values_to_prepend=[jscc] device=0
-EO
+EOT

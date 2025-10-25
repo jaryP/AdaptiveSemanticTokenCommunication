@@ -4,7 +4,7 @@ semantic:
 #  overwrite: Yes
   snr:
     _target_: builtins.range
-    _args_: [-50, 50, 5]
+    _args_: [-20, 30, 5]
 #    start: -50
 #    stop: 51
 #    step: 5

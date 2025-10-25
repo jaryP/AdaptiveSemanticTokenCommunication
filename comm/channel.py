@@ -180,11 +180,27 @@ class FadingGaussianNoiseChannel(GaussianNoiseChannel):
         self._fading_sigma = fading_sigma
 
     def apply_noise(self, x, signal_power, snr):
+        sigma = self._fading_sigma
+        # if isinstance(snr, Sequence):
+        #     r1, r2 = sigma
+        #     snr = (r1 - r2) * torch.rand(len(x), device=device) + r2
+
+
+        if isinstance(snr, torch.Tensor):
+            while len(snr.shape) < len(x.shape):
+                snr = snr[..., None]
+
+        # noise_power = (signal_power / (10 ** (snr / 10)))
         noise_power = (((self._fading_sigma ** 2) * signal_power) / (10 ** (snr / 10)))
+
         std = torch.sqrt(noise_power)
 
         noise = torch.randn_like(x) * std
-        h = torch.randn_like(signal_power) * self._fading_sigma
+
+        # std = torch.sqrt(noise_power)
+        #
+        # noise = torch.randn_like(x) * std
+        h = torch.randn_like(x) * self._fading_sigma
 
         return x * h + noise
 

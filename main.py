@@ -464,6 +464,7 @@ def main(cfg: DictConfig):
 
                 overwrite_model = experiment_cfg.get('overwrite_model', False)
                 overwrite_evaluation = experiment_cfg.get('overwrite_evaluation', overwrite_model)
+                comm_model = comm_model.to(device)
 
                 if os.path.exists(comm_model_path) and not overwrite_model:
                     model_dict = torch.load(comm_model_path, map_location=device)
@@ -546,7 +547,10 @@ def main(cfg: DictConfig):
 
                 if opt_index is not None:
                 # for opt_i in opt_index if isinstance(opt_index, Sequence) else [opt_index]:
-                    models[opt_index][str(compression)] = deepcopy(comm_model.cpu()).eval()
+                    for p in comm_model.parameters():
+                        p.grad = None
+
+                    models[opt_index][str(compression)] = deepcopy(comm_model).cpu().eval()
 
                 final_evaluation = cfg.get('comm_evaluation', {})
                 if final_evaluation is None:

@@ -125,7 +125,7 @@ class BaseRealToComplexNN(nn.Module):
                                                n_copy=2, invert=False)
 
         self.r_fl, self.c_fl = rr, cc
-
+        
         self.normalize = normalize
         self.transpose = transpose
         self.sincos = sincos
